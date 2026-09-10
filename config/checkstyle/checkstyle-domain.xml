@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  The two non-negotiables from CLAUDE.md, enforced by the build rather than by review.
+  Applied to domain, shared and application only (see the pom): shared is where Money
+  lives, and application is where money is aggregated and normalised.
+-->
+<module name="Checker">
+  <property name="severity" value="error"/>
+  <property name="charset" value="UTF-8"/>
+  <property name="fileExtensions" value="java"/>
+
+  <module name="TreeWalker">
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="banBinaryFloatingPoint"/>
+      <property name="format" value="\b(double|float|Double|Float)\b"/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="double/float are banned here. Money is BigDecimal + CurrencyCode; binary floating point cannot represent a salary exactly. See CLAUDE.md."/>
+    </module>
+
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="banAmbientClock"/>
+      <property name="format"
+                value="\b(LocalDate|LocalDateTime|LocalTime|Instant|ZonedDateTime|OffsetDateTime|Year|YearMonth)\s*\.\s*now\s*\("/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="now() is banned in domain and application code. Inject Clock - it is what makes temporal behaviour testable. See CLAUDE.md."/>
+    </module>
+  </module>
+</module>

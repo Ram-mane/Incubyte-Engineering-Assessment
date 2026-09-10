@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset name="salary-management"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    Bug-finding rules only. Style is Spotless's job and structure is Checkstyle's, so PMD
+    is pointed at the categories that catch defects rather than preferences.
+  </description>
+
+  <rule ref="category/java/errorprone.xml"/>
+  <rule ref="category/java/bestpractices.xml"/>
+</ruleset>

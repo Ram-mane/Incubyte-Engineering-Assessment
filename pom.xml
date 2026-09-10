@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.13</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.acme</groupId>
+  <artifactId>salary-management</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>Salary Management</name>
+  <description>Salary management and compensation analytics</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Quality gates. Thresholds come from docs/07-TEST-STRATEGY.md sections 5 and 9. -->
+    <coverage.min>0.80</coverage.min>
+    <mutation.threshold>70</mutation.threshold>
+
+    <archunit.version>1.3.2</archunit.version>
+    <checkstyle.version>10.26.1</checkstyle.version>
+    <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
+    <enforcer.plugin.version>3.5.0</enforcer.plugin.version>
+    <jacoco.plugin.version>0.8.13</jacoco.plugin.version>
+    <pitest.plugin.version>1.20.1</pitest.plugin.version>
+    <pitest.junit5.version>1.2.2</pitest.junit5.version>
+    <pmd.plugin.version>3.26.0</pmd.plugin.version>
+    <spotless.plugin.version>2.44.5</spotless.plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Fail immediately on a wrong JDK rather than producing bytecode nobody asked for. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-build-environment</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion><version>[21,22)</version></requireJavaVersion>
+                <requireMavenVersion><version>[3.8,)</version></requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.plugin.version}</version>
+        <configuration>
+          <java>
+            <palantirJavaFormat/>
+            <removeUnusedImports/>
+            <importOrder><order>java,javax,jakarta,org,com,</order></importOrder>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotless-check</id>
+            <phase>validate</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${checkstyle.plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <consoleOutput>true</consoleOutput>
+          <failOnViolation>true</failOnViolation>
+          <violationSeverity>error</violationSeverity>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>checkstyle-general</id>
+            <phase>validate</phase>
+            <goals><goal>check</goal></goals>
+            <configuration>
+              <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+            </configuration>
+          </execution>
+          <!-- The money and time non-negotiables from CLAUDE.md, enforced by the build
+               rather than by review. Money lives in shared/, so a domain-only scope
+               would leave the class the rule exists to protect unguarded. -->
+          <execution>
+            <id>checkstyle-money-and-time-bans</id>
+            <phase>validate</phase>
+            <goals><goal>check</goal></goals>
+            <configuration>
+              <configLocation>config/checkstyle/checkstyle-domain.xml</configLocation>
+              <includeTestSourceDirectory>false</includeTestSourceDirectory>
+              <includes>**/domain/**/*.java,**/shared/**/*.java,**/application/**/*.java</includes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <version>${pmd.plugin.version}</version>
+        <configuration>
+          <rulesets><ruleset>config/pmd/ruleset.xml</ruleset></rulesets>
+          <failOnViolation>true</failOnViolation>
+          <printFailingErrors>true</printFailingErrors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>pmd-check</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>jacoco-agent</id>
+            <goals><goal>prepare-agent</goal></goals>
+          </execution>
+          <execution>
+            <id>jacoco-report</id>
+            <phase>verify</phase>
+            <goals><goal>report</goal></goals>
+          </execution>
+          <!-- Gated on domain and application only. Adapters are deliberately ungated:
+               chasing coverage on generated mappers produces tests nobody should read.
+               docs/07-TEST-STRATEGY.md section 5. -->
+          <execution>
+            <id>jacoco-check-domain-and-application</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <includes>
+                    <include>com.acme.salarymanagement.*.domain.*</include>
+                    <include>com.acme.salarymanagement.*.application.*</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${coverage.min}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Integration tests arrive with Testcontainers in 1.2; the binding exists now
+           so *IT classes are never silently skipped once they do. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- Mutation testing is slow, so it is its own profile: `mvn -Pmutation test`,
+         exactly as documented in CLAUDE.md. Threshold 70% per docs/07-TEST-STRATEGY.md
+         section 5: line coverage says a line ran, mutation coverage says a test would
+         notice if it were wrong. -->
+    <profile>
+      <id>mutation</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>${pitest.plugin.version}</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-junit5-plugin</artifactId>
+                <version>${pitest.junit5.version}</version>
+              </dependency>
+            </dependencies>
+            <configuration>
+              <targetClasses>
+                <param>com.acme.salarymanagement.*.domain.*</param>
+                <param>com.acme.salarymanagement.*.application.*</param>
+              </targetClasses>
+              <targetTests><param>com.acme.salarymanagement.*</param></targetTests>
+              <mutationThreshold>${mutation.threshold}</mutationThreshold>
+              <failWhenNoMutations>false</failWhenNoMutations>
+              <timestampedReports>false</timestampedReports>
+              <outputFormats>
+                <param>HTML</param>
+                <param>XML</param>
+              </outputFormats>
+            </configuration>
+            <executions>
+              <execution>
+                <id>pitest-mutation-coverage</id>
+                <phase>test</phase>
+                <goals><goal>mutationCoverage</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
