@@ -1,0 +1,15 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+node_modules/
+dist/
+.angular/
+coverage/
+*.log
+.env
+.env.local
+.idea/
+.vscode/
+*.iml
+.DS_Store
+playwright-report/
+test-results/
