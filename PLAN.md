@@ -102,6 +102,7 @@ raising quality rather than adding features.
 | 3.5 | Band positions as a sortable column | `feat: add band position reporting` |
 | 3.6 | Shared filter set applied across all dashboard endpoints | `feat: apply shared filters across dashboard` |
 | 3.7 | `EXPLAIN`-asserting tests + N+1 statement-count guard | `test: assert dashboard queries use indexes` |
+| 3.7b | **SQL aggregate vs a full-precision `BigDecimal` reference over the same seeded rows, asserting exact equality** — the reference mirrors the SQL: accumulate across all currencies unrounded, round once at the end. It must not be built from `Money`, which rounds on construction (D032) — `Money` represents amounts, it is not an accumulator. Zero tolerance, because "to the minor unit" is still a tolerance and the real gap would be `0.005 × currencies` ([ADR-0013](docs/adr/0013-sum-then-convert-for-currency-totals.md), D061) | `test: pin the sql total to a java reference computation` |
 | 3.8 | Caffeine caching, evicted on `SalaryChanged` | `perf: cache dashboard aggregates and fx rates` |
 | 3.9 | Angular dashboard: KPI cards, charts, filter bar | `feat: add dashboard with kpi cards and filters` |
 | 3.10 | CSV bulk import + rejected-rows report (API + screen) | `feat: add csv bulk import with row-level validation` |

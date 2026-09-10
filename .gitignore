@@ -13,3 +13,6 @@ coverage/
 .DS_Store
 playwright-report/
 test-results/
+
+# jqwik records failed property samples here to replay them first next run.
+.jqwik-database

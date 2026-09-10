@@ -35,6 +35,7 @@
     <checkstyle.version>10.26.1</checkstyle.version>
     <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
     <enforcer.plugin.version>3.5.0</enforcer.plugin.version>
+    <jqwik.version>1.9.3</jqwik.version>
     <jacoco.plugin.version>0.8.13</jacoco.plugin.version>
     <pitest.plugin.version>1.20.1</pitest.plugin.version>
     <pitest.junit5.version>1.2.2</pitest.junit5.version>
@@ -81,6 +82,14 @@
       <groupId>com.tngtech.archunit</groupId>
       <artifactId>archunit-junit5</artifactId>
       <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Money and FX are where the edge cases are combinatorial: a property covers the
+         rounding interactions that an example test would only find by luck. -->
+    <dependency>
+      <groupId>net.jqwik</groupId>
+      <artifactId>jqwik</artifactId>
+      <version>${jqwik.version}</version>
       <scope>test</scope>
     </dependency>
     <!-- Integration tests run against the same engine, dialect and constraints as

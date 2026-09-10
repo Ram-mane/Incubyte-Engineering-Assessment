@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -182,6 +183,84 @@ class MoneyTest {
             // -1 fraction digits for each, so there is no scale to normalise to.
             assertThatThrownBy(() -> new CurrencyCode("XAU")).isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> new CurrencyCode("XXX")).isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    class Conversion {
+
+        private static final LocalDate TENTH_OF_SEPTEMBER = LocalDate.of(2026, 9, 10);
+
+        private ExchangeRate rate(CurrencyCode from, CurrencyCode to, String rate) {
+            return new ExchangeRate(from, to, new BigDecimal(rate), TENTH_OF_SEPTEMBER);
+        }
+
+        @Test
+        void converting_applies_the_rate_it_is_given() {
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThat(rupees.convertTo(USD, rate(INR, USD, "0.012"))).isEqualTo(Money.of("12.00", USD));
+        }
+
+        @Test
+        void a_converted_amount_takes_the_scale_of_the_target_currency() {
+            Money dollars = Money.of("100.00", USD);
+
+            assertThat(dollars.convertTo(JPY, rate(USD, JPY, "147.83")).amount().scale())
+                    .isZero();
+        }
+
+        @Test
+        void converting_to_the_currency_already_held_returns_the_same_money_and_needs_no_rate() {
+            // Identity is not conversion. Requiring a rate here would mean seeding INR->INR rows
+            // for every currency purely so the compa-ratio path has something to pass.
+            Money rupees = Money.of("1200000.00", INR);
+
+            assertThat(rupees.convertTo(INR, null)).isSameAs(rupees);
+        }
+
+        @Test
+        void a_rate_whose_source_is_not_the_currency_held_is_rejected() {
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThatThrownBy(() -> rupees.convertTo(EUR, rate(USD, EUR, "0.92")))
+                    .isInstanceOf(CurrencyMismatchException.class);
+        }
+
+        @Test
+        void a_rate_that_does_not_reach_the_requested_currency_is_rejected() {
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThatThrownBy(() -> rupees.convertTo(EUR, rate(INR, USD, "0.012")))
+                    .isInstanceOf(CurrencyMismatchException.class);
+        }
+
+        @Test
+        void a_rate_for_the_reverse_direction_is_rejected_rather_than_inverted() {
+            // Inverting silently would be an implicit conversion, and 1/rate is not the rate
+            // the other direction actually traded at.
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThatThrownBy(() -> rupees.convertTo(USD, rate(USD, INR, "83.20")))
+                    .isInstanceOf(CurrencyMismatchException.class);
+        }
+
+        @Test
+        void converting_without_a_target_currency_is_rejected() {
+            // Load-bearing, unlike the guards deleted in 1.7: without it currency.equals(null) is
+            // false, execution falls through to the rate check, and the caller gets a
+            // CurrencyMismatchException naming "null" instead of a plain NPE.
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThatThrownBy(() -> rupees.convertTo(null, rate(INR, USD, "0.012")))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void converting_without_a_rate_to_a_different_currency_is_rejected() {
+            Money rupees = Money.of("1000.00", INR);
+
+            assertThatThrownBy(() -> rupees.convertTo(USD, null)).isInstanceOf(NullPointerException.class);
         }
     }
 

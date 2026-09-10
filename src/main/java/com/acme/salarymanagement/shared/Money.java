@@ -44,6 +44,28 @@ public record Money(BigDecimal amount, CurrencyCode currency) {
         return new Money(amount.subtract(other.amount), currency);
     }
 
+    /**
+     * Converts a single amount using an explicitly supplied rate.
+     *
+     * <p>Not a building block for a cross-currency total: rounding here happens once per amount,
+     * and a total built that way drifts from the SQL aggregate by half a minor unit per row. Sum
+     * within a currency and convert the subtotal once instead - ADR-0013.
+     */
+    public Money convertTo(CurrencyCode target, ExchangeRate rate) {
+        Objects.requireNonNull(target, "the target currency is required");
+        if (currency.equals(target)) {
+            // Identity is not conversion, and demanding a rate here would mean seeding
+            // INR->INR rows for every currency purely to satisfy the signature.
+            return this;
+        }
+        Objects.requireNonNull(rate, "converting between currencies requires an explicit rate");
+        if (!rate.from().equals(currency) || !rate.to().equals(target)) {
+            throw new CurrencyMismatchException("a %s to %s rate cannot convert %s to %s"
+                    .formatted(rate.from().code(), rate.to().code(), currency.code(), target.code()));
+        }
+        return new Money(amount.multiply(rate.rate()), target);
+    }
+
     private void requireSameCurrencyAs(Money other) {
         if (!currency.equals(other.currency)) {
             throw new CurrencyMismatchException("cannot combine %s with %s without an explicit exchange rate"

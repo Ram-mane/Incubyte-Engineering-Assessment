@@ -42,8 +42,18 @@ the behaviour, not the method. `should_return_true` tells a reviewer nothing;
 > for any sequence of salary changes, the number of audit revisions equals the number of accepted
 > changes, and each revision's `previousAmount` equals the preceding revision's `newAmount`.
 
-> for any set of salaries in any mix of currencies, converting each to USD and summing equals
-> summing per-currency and then converting — within one minor unit.
+> **P1, exact.** Summing salaries within one currency and converting the subtotal once is
+> invariant under reordering, and equals a full-precision reference rounded once — which is what
+> PostgreSQL's `sum(amount * rate)` computes. Zero tolerance.
+
+> **P2, bounded.** Converting each salary and *then* summing drifts from P1 by at most
+> `0.005 × (n + currencies)`. It rounds `n` times where P1 rounds once per currency.
+
+The second is named `per_row_conversion_accumulates_error_and_must_not_be_used_for_totals`, because
+it documents a prohibition rather than permitting the drift — see [ADR-0013](adr/0013-sum-then-convert-for-currency-totals.md).
+An earlier draft of this document stated the bound as "within one minor unit". That is
+arithmetically false for any list long enough to expose it, and a property written to it would have
+passed only because it was kept small.
 
 The second one catches rounding-accumulation bugs in the KPI totals that no example-based test
 would, and it is the kind of thing worth showing in an interview.
