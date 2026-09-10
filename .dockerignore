@@ -1,0 +1,12 @@
+# Anything the image build does not read stays out of the build context: a 200MB context
+# makes every deploy slower and can leak local state into the image.
+.git/
+.github/
+.claude/
+target/
+ui/
+docs/
+perf/
+*.md
+.gitignore
+docker-compose.yml

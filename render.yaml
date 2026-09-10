@@ -1,0 +1,48 @@
+# Render blueprint. Connecting this repository in Render's dashboard creates both services;
+# nothing here contains a secret.
+#
+# The database is deliberately NOT declared as a Render resource: docs/03-ARCHITECTURE.md
+# section 3 puts PostgreSQL on Neon, whose free tier keeps the data when the web service
+# spins down. The datasource is therefore supplied as environment variables marked
+# `sync: false`, which Render prompts for on first deploy and never stores in this file.
+
+services:
+  - type: web
+    name: salary-management-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    branch: main
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # Flyway runs on startup, so a fresh database migrates itself on first boot.
+      - key: SPRING_FLYWAY_ENABLED
+        value: "true"
+
+  - type: web
+    name: salary-management-ui
+    runtime: static
+    rootDir: ui
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist/ui/browser
+    autoDeployTrigger: commit
+    routes:
+      # The browser calls /api on its own origin, so no API host is compiled into the
+      # bundle and there is no CORS configuration to get wrong.
+      - type: rewrite
+        source: /api/*
+        destination: https://salary-management-api.onrender.com/api/*
+      # Angular owns its routes: any deep link must return index.html, not a 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html

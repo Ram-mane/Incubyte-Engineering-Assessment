@@ -14,4 +14,16 @@ spring:
     open-in-view: false
 
 server:
-  port: 8080
+  # The platform assigns the port; 8080 is the local default.
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health only. Every other endpoint is an information disclosure nobody asked for.
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

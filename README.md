@@ -58,6 +58,28 @@ cd ui && npm test && npm run e2e
 k6 run perf/k6/directory-browse.js
 ```
 
+Both builds require **JDK 21** and **Node 22**; the Maven enforcer fails fast on anything else
+rather than producing bytecode for a JVM nobody verified.
+
+## Deploying
+
+`render.yaml` is a Render blueprint: connecting this repository creates the API (Docker, from the
+multi-stage `Dockerfile`) and the client (static, built from `ui/`). PostgreSQL is **not** declared
+as a Render resource — it is a managed Neon instance, per
+[ADR-0003](docs/adr/0003-postgres-over-sqlite.md) and
+[03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md) — so the datasource arrives as three environment
+variables Render prompts for on the first deploy and never stores in the repository:
+
+```
+SPRING_DATASOURCE_URL       jdbc:postgresql://<neon-host>/<database>?sslmode=require
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+```
+
+Flyway migrates on startup, so a fresh database provisions itself on first boot. Render polls
+`/actuator/health` to decide an instance is live; only `health` is exposed, because every other
+actuator endpoint is information disclosure nobody asked for.
+
 ## Stack
 
 Java 21 · Spring Boot 3.3 · PostgreSQL 16 · Flyway · Angular 19 (standalone, signals) · Angular
