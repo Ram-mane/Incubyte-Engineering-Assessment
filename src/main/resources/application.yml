@@ -2,5 +2,16 @@ spring:
   application:
     name: salary-management
 
+  flyway:
+    enabled: true
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate is never allowed to create or alter it - a schema
+      # that drifts between what Hibernate infers and what the migrations say is a schema
+      # nobody can reason about.
+      ddl-auto: validate
+    open-in-view: false
+
 server:
   port: 8080

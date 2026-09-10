@@ -1,0 +1,25 @@
+# Local development database. Credentials here are deliberately trivial and local-only:
+# nothing in this file is used by any deployed environment, which reads its datasource from
+# the environment. See docs/10-SECURITY.md.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: salary-management-db
+    environment:
+      POSTGRES_DB: salary_management
+      POSTGRES_USER: salary_management
+      POSTGRES_PASSWORD: salary_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Compose reports the container healthy only once Postgres accepts connections,
+      # so `docker compose up -d --wait` is a usable signal for scripts and CI.
+      test: ["CMD-SHELL", "pg_isready -U salary_management -d salary_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

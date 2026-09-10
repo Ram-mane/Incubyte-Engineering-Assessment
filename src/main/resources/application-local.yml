@@ -1,0 +1,6 @@
+# Matches docker-compose.yml. Run: docker compose up -d
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/salary_management
+    username: salary_management
+    password: salary_management
