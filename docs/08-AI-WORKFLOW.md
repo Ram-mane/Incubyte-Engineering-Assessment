@@ -69,10 +69,18 @@ accepted because a test I wrote passes, never because the code looks plausible.
 | 4 | Tests asserting mock interactions rather than outcomes | coverage without confidence | `test-auditor` subagent added to the loop |
 | 5 | `@Transactional` on a read-only analytics service with a write-capable datasource | subtle, harmless-looking, wrong | ArchUnit rule forbidding write ports in `analytics` |
 | 6 | Reintroducing an `effective_from` column while writing the revision migration — pattern-matching on "audit table" | out of scope, and would have quietly restarted the temporal design the customer declined | scope boundaries written into `CLAUDE.md`; the reviewer subagent now flags effective-dating in a diff |
+| 7 | A commit message asserting that all eight ArchUnit rules "were proved against deliberate violations" | two were. The probes — a Spring import in `domain` and a `Repository` interface declared in an adapter — could only exercise two rules. The other six govern packages that do not exist yet, so no violating class could be written to prove them. The sentence was accurate about what had been run and wrong about what it demonstrated | caught in review, not by a test — which is the point. `PLAN.md` 2.15 sets `failOnEmptyShould=true` once the packages exist, so a rule matching nothing fails from then on instead of passing quietly |
 
-Five of those six are now enforced by a rule or a test rather than by remembering. That is the
+Five of the first six are now enforced by a rule or a test rather than by remembering. That is the
 actual lesson: when an AI makes a mistake twice, the fix is not a better prompt, it is a build
 failure.
+
+Number 7 is a different species and the more uncomfortable one. The first six are wrong code, which
+a test catches. That one was a wrong *claim about verification* in a commit message — confident,
+specific, and checkable only by rerunning the thing it described. An agent that overstates what it
+proved is harder to defend against than one that writes a bug, because the artefact looks like
+evidence. The countermeasure is not trust: it is making the gate itself fail loudly when it has
+nothing to check.
 
 Number 6 is the one worth dwelling on. The model had read the original temporal design in the
 repository's history and pattern-matched "append-only audit table" back onto it. Committed
