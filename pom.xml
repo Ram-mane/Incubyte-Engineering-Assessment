@@ -164,6 +164,7 @@
             <goals><goal>check</goal></goals>
             <configuration>
               <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+              <suppressionsLocation>config/checkstyle/suppressions.xml</suppressionsLocation>
             </configuration>
           </execution>
           <!-- The money and time non-negotiables from CLAUDE.md, enforced by the build

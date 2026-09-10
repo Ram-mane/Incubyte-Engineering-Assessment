@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+  <!--
+    ArchUnit rule fields are named after the rule they express - the field name is what
+    appears in the failure message, so `the_domain_knows_about_no_framework` tells a reader
+    what broke and THE_DOMAIN_KNOWS_ABOUT_NO_FRAMEWORK does not. This is the convention
+    docs/07-TEST-STRATEGY.md section 4 already specifies.
+  -->
+  <suppress checks="ConstantName" files="[\\/]architecture[\\/]"/>
+</suppressions>
