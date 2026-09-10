@@ -31,7 +31,7 @@ services:
     name: salary-management-ui
     runtime: static
     rootDir: ui
-    plan: free
+    # No plan: static sites have none, and naming one fails validation.
     branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: dist/ui/browser
