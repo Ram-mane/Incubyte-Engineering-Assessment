@@ -93,7 +93,36 @@ This is what makes the architecture real rather than aspirational.
 
 ## 5. Mutation testing
 
-Pitest on `..shared..`, `..domain..` and `..application..`, **threshold 70%, build fails below it.** `shared` is in scope because that is where `Money` and the FX arithmetic live: scoping the gate to domain and application alone left the code that computes people's pay unmutated, and the threshold passed on zero mutations.
+Pitest on `..shared..`, `..domain..` and `..application..`, **threshold 70%, build fails below it.**
+`shared` is in scope because that is where `Money` and the FX arithmetic live: scoping the gate to
+domain and application alone left the code that computes people's pay unmutated, and the threshold
+passed on zero mutations.
+
+**A mutation score is bounded by what the tool elects to mutate, and ours does not mutate
+everything.** Read the number with that in mind — the README quotes it.
+
+- Pitest's record filter strips mutations from a record's compact constructor along with its
+  generated `equals`/`hashCode`/`toString`. Our validation lives in compact constructors, so with
+  the filter on `ExchangeRate` generated **zero** mutations while the gate reported 100%. The build
+  now runs `-FRECORD`, which surfaces the real guards at the cost of uncovered mutations in
+  generated methods nobody writes tests for.
+- Even with the filter off, coverage of a constructor exercised from a **test class's static
+  initialiser** is not attributed to individual tests, so Pitest reports `SURVIVED` for mutations
+  that are in fact killed. `CurrencyCode`'s `< 0` guard is one: Pitest calls it survived, and
+  changing it by hand fails 34 tests.
+- `Money`'s compact constructor holds the rounding policy — `setScale(currency.scale(),
+  HALF_EVEN)` — and **no default mutator applies to it**: there is no conditional, no arithmetic
+  operator and no return value to mutate. It cannot be covered by this gate at all.
+
+That last one is verified by hand instead, and re-run whenever the policy changes:
+
+| Manual probe | Result |
+|---|---|
+| `HALF_EVEN` → `HALF_UP` | `MoneyTest$Rounding` fails 3 of 4 — `a_half_cent_rounds_down_when_the_preceding_digit_is_even` first |
+| `currency.scale()` → `currency.scale() + 1` | `MoneyTest$Scale`, `$Equality` and `$Conversion` all fail |
+
+An automated number covering part of the code, plus a recorded manual probe covering the rest, is
+honest. An automated number quoted as if it covered everything is not.
 
 Line coverage says a line ran. Mutation coverage says that if the line were wrong, a test would
 notice. For a system that computes people's pay, that distinction is the whole point — and it is a

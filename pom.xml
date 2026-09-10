@@ -308,6 +308,15 @@
                 <param>com.acme.salarymanagement.*.application.*</param>
               </targetClasses>
               <targetTests><param>com.acme.salarymanagement.*</param></targetTests>
+              <!-- Pitest's record filter strips mutations from a record's compact constructor
+                   along with its generated equals/hashCode/toString. Our validation lives in
+                   compact constructors, so with the filter on, ExchangeRate generated zero
+                   mutations and the gate reported 100% having tested none of it. Disabling it
+                   surfaces the real guards; the cost is uncovered mutations in generated
+                   methods nobody writes tests for. -->
+              <features>
+                <feature>-FRECORD</feature>
+              </features>
               <mutationThreshold>${mutation.threshold}</mutationThreshold>
               <failWhenNoMutations>false</failWhenNoMutations>
               <timestampedReports>false</timestampedReports>
