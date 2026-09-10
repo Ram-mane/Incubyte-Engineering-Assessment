@@ -78,6 +78,12 @@ raising quality rather than adding features.
 | 2.12 | Angular: employee detail + revision log | `feat: add employee detail with revision log` |
 | 2.13 | Angular: change-salary dialog | `feat: add salary change dialog` |
 | 2.14 | Redeploy; verify live end to end | `ci: deploy day two build` |
+| 2.15 | **Set `failOnEmptyShould=true`** now that all five module packages exist | `test: fail architecture rules that match no classes` |
+
+> 2.15 closes a hole opened on Day 1. Until the module packages exist, an ArchUnit rule that
+> matches no classes has to pass, or the build fails on empty rules from the first commit. Once
+> they exist that tolerance becomes a liability: a package rename would silently disable a rule
+> and the build would stay green. Five of the eight rules match nothing today.
 
 > **End of Day 2 there is a real, deployed, usable product with 10,000 employees in it.**
 
