@@ -72,7 +72,7 @@ Rules from [03-ARCHITECTURE.md](03-ARCHITECTURE.md) §4, executable:
       .resideInAnyPackage("org.springframework..", "jakarta.persistence..", "com.fasterxml..");
 
 @ArchTest static final ArchRule modules_have_no_cycles =
-    slices().matching("com.acme.compiq.(*)..").should().beFreeOfCycles();
+    slices().matching("com.acme.salarymanagement.(*)..").should().beFreeOfCycles();
 
 @ArchTest static final ArchRule analytics_is_read_only =
     noClasses().that().resideInAPackage("..analytics..")

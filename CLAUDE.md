@@ -89,7 +89,7 @@ k6 run perf/k6/dashboard.js
 ## Where things live
 
 ```
-src/main/java/com/acme/compiq/
+src/main/java/com/acme/salarymanagement/
   shared/                     Money, CountryCode, CurrencyCode, ExchangeRate
   employee/ compensation/ band/ analytics/ bulkimport/ identity/
     # compensation = change-salary use case + append-only revision log

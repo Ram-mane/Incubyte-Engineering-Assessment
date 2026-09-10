@@ -92,7 +92,7 @@ A build that violates these fails. That is the difference between an architectur
 ## 5. Package layout
 
 ```
-com.acme.compiq
+com.acme.salarymanagement
 ├── shared/                       # Money, CountryCode, CurrencyCode, ExchangeRate, DomainException
 ├── employee/
 │   ├── domain/                   # Employee, EmployeeNumber, EmploymentStatus

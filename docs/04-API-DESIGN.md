@@ -81,7 +81,7 @@ second entry point cannot bypass it. Seeded demo credentials are in the README.
 
 ```json
 {
-  "type": "https://compiq.dev/errors/currency-mismatch",
+  "type": "https://salary-management.dev/errors/currency-mismatch",
   "title": "Salary currency does not match the employee's country",
   "status": 422,
   "detail": "Employee 4821 is based in IN; salary must be in INR, but EUR was submitted.",
