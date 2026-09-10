@@ -9,6 +9,24 @@
     is pointed at the categories that catch defects rather than preferences.
   </description>
 
-  <rule ref="category/java/errorprone.xml"/>
+  <rule ref="category/java/errorprone.xml">
+    <!--
+      MissingSerialVersionUID fires on every domain exception, because Throwable is Serializable.
+      These exceptions are thrown, caught and mapped to an HTTP problem response inside one
+      process - they are never written to a stream, so no reader of a serialised form can be
+      broken by changing them. The constant would be a number nobody will ever bump: a
+      maintenance signal that means nothing, which is worse than its absence.
+    -->
+    <exclude name="MissingSerialVersionUID"/>
+  </rule>
+
+  <!-- Kept everywhere else: a genuinely serialised class does need one. -->
+  <rule ref="category/java/errorprone.xml/MissingSerialVersionUID">
+    <properties>
+      <property name="violationSuppressXPath"
+                value="//ClassDeclaration[ends-with(@SimpleName, 'Exception')]"/>
+    </properties>
+  </rule>
+
   <rule ref="category/java/bestpractices.xml"/>
 </ruleset>

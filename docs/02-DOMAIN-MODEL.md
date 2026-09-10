@@ -135,7 +135,7 @@ called with the arguments swapped.
 
 | # | Invariant | Enforced in |
 |---|---|---|
-| I1 | Salary amount must be > 0. | `Money` |
+| I1 | An employee's salary must be > 0. | `Employee.changeSalaryTo` + DB CHECK |
 | I2 | Money of different currencies cannot be summed without an explicit rate. | `Money` |
 | I3 | A salary change always produces exactly one `SalaryRevision`. | `Employee.changeSalaryTo` |
 | I4 | A revision's `previousAmount` equals the employee's salary before the change. | `Employee.changeSalaryTo` |
