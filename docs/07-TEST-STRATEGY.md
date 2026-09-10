@@ -83,7 +83,7 @@ This is what makes the architecture real rather than aspirational.
 
 ## 5. Mutation testing
 
-Pitest on `..domain..` and `..application..`, **threshold 70%, build fails below it.**
+Pitest on `..shared..`, `..domain..` and `..application..`, **threshold 70%, build fails below it.** `shared` is in scope because that is where `Money` and the FX arithmetic live: scoping the gate to domain and application alone left the code that computes people's pay unmutated, and the threshold passed on zero mutations.
 
 Line coverage says a line ran. Mutation coverage says that if the line were wrong, a test would
 notice. For a system that computes people's pay, that distinction is the whole point — and it is a

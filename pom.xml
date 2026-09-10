@@ -294,6 +294,7 @@
             </dependencies>
             <configuration>
               <targetClasses>
+                <param>com.acme.salarymanagement.shared.*</param>
                 <param>com.acme.salarymanagement.*.domain.*</param>
                 <param>com.acme.salarymanagement.*.application.*</param>
               </targetClasses>
