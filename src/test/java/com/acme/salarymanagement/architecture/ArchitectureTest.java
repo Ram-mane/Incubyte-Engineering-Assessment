@@ -19,20 +19,19 @@ import com.tngtech.archunit.lang.ArchRule;
 @AnalyzeClasses(packages = "com.acme.salarymanagement", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
+    // An allowlist, not a denylist. Naming the frameworks to forbid only forbids the ones
+    // someone thought of: slf4j, Guava or the next convenient library would all have passed.
+    // Stating what the domain may depend on - the JDK and itself - has no such gap.
     @ArchTest
-    static final ArchRule the_domain_knows_about_no_framework = noClasses()
+    static final ArchRule the_domain_and_shared_kernel_depend_on_nothing_but_the_jdk = noClasses()
             .that()
-            .resideInAPackage("..domain..")
+            .resideInAnyPackage("..domain..", "..shared..")
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage(
-                    "org.springframework..",
-                    "jakarta.persistence..",
-                    "jakarta.validation..",
-                    "org.hibernate..",
-                    "com.fasterxml..")
+            .resideOutsideOfPackages("java..", "javax..", "..domain..", "..shared..")
             .because("the domain is plain Java, so its rules can be tested in milliseconds "
-                    + "without a container and cannot be bent to suit a framework");
+                    + "without a container and cannot be bent to suit a framework - and shared "
+                    + "is inside that boundary, because the domain depends on it");
 
     @ArchTest
     static final ArchRule the_domain_does_not_reach_up_into_the_application_layer = noClasses()

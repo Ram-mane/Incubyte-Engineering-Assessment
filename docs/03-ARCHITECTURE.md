@@ -79,7 +79,11 @@ graph LR
 
 Rules, all enforced by ArchUnit tests in `ArchitectureTest.java`:
 
-1. `domain` depends on nothing but `shared-kernel` and the JDK. No Spring, no JPA, no Jackson.
+1. `domain` **and `shared-kernel`** depend on nothing but each other and the JDK. Stated as an
+   allowlist, not a list of banned frameworks: naming Spring, JPA and Jackson only bans the ones
+   someone thought of, and slf4j or the next convenient library would pass. `shared` is inside
+   the boundary because the domain depends on it — a framework reaching `shared` reaches the
+   domain with it.
 2. `application` depends on `domain` and on **ports** only — never on an adapter.
 3. Adapters depend inward. Nothing depends on an adapter.
 4. Modules talk to each other only through the other module's `application` port interfaces,
