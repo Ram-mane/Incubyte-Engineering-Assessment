@@ -39,9 +39,11 @@ services:
     routes:
       # The browser calls /api on its own origin, so no API host is compiled into the
       # bundle and there is no CORS configuration to get wrong.
+      # Render appends a suffix when a service name is not globally unique, so this is the
+      # hostname it actually assigned - not the one the service is named after.
       - type: rewrite
         source: /api/*
-        destination: https://salary-management-api.onrender.com/api/*
+        destination: https://salary-management-api-bv03.onrender.com/api/*
       # Angular owns its routes: any deep link must return index.html, not a 404.
       - type: rewrite
         source: /*
