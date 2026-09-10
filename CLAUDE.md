@@ -57,7 +57,9 @@ sufficient (see `docs/adr/0002-current-salary-with-audit-log.md`). Do not reintr
 2. Make it pass with the smallest change. Touch only the files the task names.
 3. Refactor with the test green.
 4. Run `/review` before committing.
-5. One conventional commit per logical change: `feat:`, `fix:`, `test:`, `refactor:`, `perf:`,
+5. Record decisions with `/decide` as they are made. The log is append-only — supersede, never
+   edit.
+6. One conventional commit per logical change: `feat:`, `fix:`, `test:`, `refactor:`, `perf:`,
    `docs:`, `chore:`, `ci:`.
 
 Never write an implementation and its test in the same breath and declare it done. Never modify a test

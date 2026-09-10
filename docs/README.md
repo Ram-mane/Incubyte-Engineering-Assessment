@@ -19,3 +19,5 @@ Note `adr/0002-temporal-salary-model.superseded.md`: a decision made, then rever
 input. It is kept deliberately — the reversal is more informative than a tidy history.
 
 `perf/` holds k6 reports and `EXPLAIN ANALYZE` plans, committed as evidence rather than claims.
+
+**[DECISIONS.md](DECISIONS.md)** — every decision and its reasoning. ADRs cover the expensive ones; this covers the rest.

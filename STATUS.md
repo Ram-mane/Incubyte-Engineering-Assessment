@@ -20,3 +20,9 @@ that has been made, not a reminder to decide.
 | Owed by | Item | Constraint |
 |---|---|---|
 | 1.10 | `Money.isPositive()` | The narrowest method invariant I1 needs. Not a general comparator - `isGreaterThan` was written during 1.7 and deleted unused. No comparison method without a test that requires it. |
+
+## On probation
+
+| Item | Condition |
+|---|---|
+| `Money.convertTo(CurrencyCode, ExchangeRate)` | Has no production caller. Aggregates normalise in SQL, so the only callers today are its own tests. **If it still has none at the end of Day 3, delete it** — the same standard that removed `isGreaterThan` during 1.7. Kept for now because single-amount display conversion is a real need the API will have. |
