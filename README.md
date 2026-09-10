@@ -6,9 +6,17 @@ across multiple countries.
 > **Submission for the Incubyte Software Craftsperson assessment.**
 > Built by Ram Subhas Mane · September 2026
 
-**Live demo:** _<url>_ · **API docs:** _<url>/swagger-ui.html_
-**Demo credentials:** `hr.manager@acme.test` / `<password>` (read/write) · `hr.analyst@acme.test` / `<password>` (read-only)
-**Video walkthrough (3–5 min):** _<url>_
+**Live demo:** https://salary-management-ui-5bp6.onrender.com
+**API:** https://salary-management-api-bv03.onrender.com · **health:** [`/actuator/health`](https://salary-management-api-bv03.onrender.com/actuator/health)
+
+> **Deployed state:** the walking skeleton is live — Angular client, Spring Boot API and a
+> Flyway-migrated Neon PostgreSQL. The domain, the directory and the dashboard land over the
+> following two days. Free-tier instances spin down when idle, so the first request after a
+> quiet period takes roughly 50 seconds.
+
+**API docs:** _Swagger UI is published with the REST API._
+**Demo credentials:** _issued with authentication._
+**Video walkthrough (3–5 min):** _recorded against the finished build._
 
 ---
 
