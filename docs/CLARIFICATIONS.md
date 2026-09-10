@@ -1,7 +1,7 @@
 # Clarifications
 
 The assessment asks candidates to clarify rather than assume. Ten questions sent to Incubyte on
-**9 Sep 2026**; answered by Sandli Srivastava on **10 Sep 2026**. Every answer is reflected in
+**9 Sep 2026**; answered by the Incubyte hiring team on **10 Sep 2026**. Every answer is reflected in
 [01-REQUIREMENTS.md](01-REQUIREMENTS.md) and, where it changed a decision already made, in an ADR.
 
 | # | Question | Answer received | Effect on the build |

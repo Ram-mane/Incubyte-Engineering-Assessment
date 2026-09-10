@@ -1,7 +1,7 @@
 # Requirements — CompensationIQ
 
 > **The one-page requirements document the assessment asks for.** Scope confirmed with Incubyte
-> (Sandli Srivastava, 10 Sep 2026) — see [CLARIFICATIONS.md](CLARIFICATIONS.md) for all ten answers.
+> (the Incubyte hiring team, 10 Sep 2026) — see [CLARIFICATIONS.md](CLARIFICATIONS.md) for all ten answers.
 > Detail lives in [02-DOMAIN-MODEL.md](02-DOMAIN-MODEL.md) and [09-TRADEOFFS.md](09-TRADEOFFS.md).
 
 ---
