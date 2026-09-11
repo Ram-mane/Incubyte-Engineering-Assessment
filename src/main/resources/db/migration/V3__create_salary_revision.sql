@@ -79,3 +79,10 @@ GRANT SELECT, INSERT ON app_user TO salary_app;
 -- console session using the application's credentials.
 GRANT SELECT, INSERT ON salary_revision TO salary_app;
 
+-- And the part that makes all of it real: the user the application logs in as becomes a member of
+-- the role, and every connection it opens runs SET ROLE salary_app (connection-init-sql in
+-- application.yml). Without this the application connects as the owner of salary_revision, which
+-- holds DELETE on it whatever is granted above, and the append-only guarantee is a statement about
+-- a role that never executes a query. CURRENT_USER is the login user in every environment because
+-- Flyway migrates over the application's own connection details (D097).
+GRANT salary_app TO CURRENT_USER;

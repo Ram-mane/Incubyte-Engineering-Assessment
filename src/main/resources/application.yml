@@ -2,6 +2,13 @@ spring:
   application:
     name: salary-management
 
+  datasource:
+    hikari:
+      # Every application connection runs as the restricted role, so the INSERT/SELECT-only grant
+      # on salary_revision applies to the running system and not just to a role in the catalogue.
+      # The login user is a member of salary_app; the migration grants that membership.
+      connection-init-sql: SET ROLE salary_app
+
   flyway:
     enabled: true
 
