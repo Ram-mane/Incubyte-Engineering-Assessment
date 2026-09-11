@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalary;
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalaryCommand;
@@ -45,6 +46,9 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
  * roll everything back regardless, which would make this pass no matter what the service did.
  */
 @Import(ChangeSalaryIsAllOrNothingIT.ALogThatCannotWrite.class)
+// Authorisation lives at the use case (docs/10-SECURITY.md), so a caller with no role
+// reaches nothing. That is asserted separately; here it is a precondition.
+@WithMockUser(roles = "HR_MANAGER")
 class ChangeSalaryIsAllOrNothingIT extends PostgresIntegrationTest {
 
     private static final CurrencyCode INR = new CurrencyCode("INR");

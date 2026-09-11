@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalary;
@@ -28,6 +29,9 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
 
 /** A pay change, end to end: what moves, what is written down, and what is refused. */
 @Transactional
+// Authorisation lives at the use case (docs/10-SECURITY.md), so a caller with no role
+// reaches nothing. That is asserted separately; here it is a precondition.
+@WithMockUser(roles = "HR_MANAGER")
 class ChangeSalaryIT extends PostgresIntegrationTest {
 
     private static final CurrencyCode INR = new CurrencyCode("INR");

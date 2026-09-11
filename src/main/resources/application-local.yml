@@ -4,3 +4,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/salary_management
     username: salary_management
     password: salary_management
+
+# Local only, and deliberately obvious. The deployed instance reads JWT_SECRET from the
+# environment; nothing in this file is used by one.
+security:
+  jwt:
+    secret: local-development-signing-key-not-a-secret

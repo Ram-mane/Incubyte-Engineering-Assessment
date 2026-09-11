@@ -13,7 +13,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * context a database that has already gone away. Flyway migrates it on first context load, so tests
  * see exactly the schema production sees.
  */
-@SpringBootTest
+// A signing key for tests only. The deployed instance reads JWT_SECRET from its environment and
+// refuses to start without one; nothing here is a default that could reach production.
+@SpringBootTest(properties = "security.jwt.secret=test-signing-key-long-enough-to-be-usable")
 @Import(CountingDataSourceConfig.class)
 public abstract class PostgresIntegrationTest {
 

@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.acme.salarymanagement.employee.application.port.in.DirectoryCursor;
@@ -36,6 +37,9 @@ import com.acme.salarymanagement.shared.SeniorityLevel;
  * about who called whom.
  */
 @WebMvcTest(EmployeeController.class)
+// The chain itself is proved by TheApiIsClosedWithoutAValidTokenIT; this slice is about the
+// document, so it authenticates and gets on with it.
+@WithMockUser(roles = "HR_ANALYST")
 @Import({EmployeeControllerTest.OnePersonDirectory.class, ProblemHandler.class})
 class EmployeeControllerTest {
 

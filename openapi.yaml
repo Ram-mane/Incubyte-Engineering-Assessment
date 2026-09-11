@@ -24,7 +24,49 @@ info:
 servers:
   - url: /api/v1
 
+# Everything below requires a bearer token except POST /auth/login, which is where tokens come
+# from, and the health probe, which the platform polls before it will route traffic here.
+security:
+  - bearerAuth: []
+
 paths:
+  /auth/login:
+    post:
+      summary: Exchange credentials for a token
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: A token and when it stops working
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expiresAt, role]
+                properties:
+                  token: { type: string }
+                  expiresAt: { type: string, format: date-time }
+                  role:
+                    type: string
+                    enum: [HR_MANAGER, HR_ANALYST]
+        "401":
+          description: |
+            Those credentials do not match a user. One response for "no such user" and "wrong
+            password" alike: telling them apart hands an attacker a list of real addresses.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /employees:
     get:
       summary: The employee directory, filtered, searched and paged
@@ -104,6 +146,8 @@ paths:
         The salary update and the audit record are written in one transaction. Either both happen
         or neither does: a salary that moved without a record of who moved it is the one outcome
         this system is built to prevent.
+
+        **`HR_MANAGER` only.** An `HR_ANALYST` token reads everything here and changes nothing.
       operationId: changeSalary
       parameters:
         - name: id
@@ -188,11 +232,21 @@ paths:
                 $ref: '#/components/schemas/DirectoryFilterOptions'
 
 components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        HS256, thirty minutes, no refresh and no server-side revocation - which is why it is
+        short. The subject is the user's id, because that is what an audit record stores.
+
   schemas:
 
     ChangeSalaryRequest:
       type: object
-      required: [amount, currency, reason, actorId]
+      required: [amount, currency, reason]
       properties:
         amount:
           type: string
@@ -209,14 +263,9 @@ components:
           type: string
           description: Optional free text. Blank is stored as no note.
           example: Annual merit review
-        actorId:
-          type: string
-          format: uuid
-          description: |
-            Who is making the change. **Temporary**: this belongs in the authenticated principal
-            and moves there when authentication lands. It is validated against the user table
-            rather than trusted, and has no default - a revision credited to an invented system
-            account answers "who changed this" with a fiction.
+      # Who is making the change is deliberately not a field. It is the authenticated principal's
+      # id, taken from the token's subject: a caller who could name somebody else as the author of
+      # a pay change could launder one through the audit log.
 
     SalaryRevision:
       type: object

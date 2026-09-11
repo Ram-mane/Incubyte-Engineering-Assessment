@@ -112,6 +112,24 @@ Written **before and during** the build, not afterwards — the git history show
 | [ADRs](docs/adr/) | Thirteen decision records, each with rejected alternatives — including one superseded and kept |
 | [Clarifications](docs/CLARIFICATIONS.md) | The ten questions asked before building, the answers, and what each changed |
 
+## Signing in
+
+The seeded database has two accounts, one per role. They are demo credentials in a demo database
+and are published here deliberately; the deployed instance signs tokens with a secret read from
+its environment, and the application refuses to start without one.
+
+| Email | Password | Role | Can |
+|---|---|---|---|
+| `hr.manager@acme.example` | `demo-password` | `HR_MANAGER` | read everything, change pay |
+| `hr.analyst@acme.example` | `demo-password` | `HR_ANALYST` | read everything, change nothing |
+
+`POST /api/v1/auth/login` returns a thirty-minute HS256 token. Every other endpoint requires it:
+the filter chain denies by default, so a new endpoint is protected by existing rather than by
+somebody remembering to protect it.
+
+Who made a pay change is taken from the token's subject and never from the request body. A caller
+who could name somebody else as the author of a change could launder one through the audit log.
+
 ## Pagination, and the evidence it works
 
 The directory is keyset-paged, not `OFFSET`-paged: a page is a place to resume from, given as an

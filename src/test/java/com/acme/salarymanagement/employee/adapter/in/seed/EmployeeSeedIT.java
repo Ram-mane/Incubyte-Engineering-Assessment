@@ -22,7 +22,7 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
  * the profile is run for real.
  */
 @ActiveProfiles("seed")
-@SpringBootTest(properties = "seed.employees=25")
+@SpringBootTest(properties = {"seed.employees=25", "security.jwt.secret=test-signing-key-long-enough-to-be-usable"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EmployeeSeedIT extends PostgresIntegrationTest {
 

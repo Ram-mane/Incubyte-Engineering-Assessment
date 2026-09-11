@@ -2,6 +2,7 @@ package com.acme.salarymanagement.employee.application.service;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.acme.salarymanagement.employee.application.port.in.DirectoryCursor;
@@ -32,6 +33,7 @@ class ListEmployeesService implements ListEmployees {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('HR_MANAGER','HR_ANALYST')")
     public EmployeePage list(DirectoryRequest request) {
         if (request.limit() < SMALLEST_PAGE) {
             throw new IllegalArgumentException("a page holds at least one employee");
@@ -49,6 +51,7 @@ class ListEmployeesService implements ListEmployees {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('HR_MANAGER','HR_ANALYST')")
     public DirectoryFilterOptions filterOptions() {
         return new DirectoryFilterOptions(
                 directory.distinctValuesOf(FilterableColumn.COUNTRY),

@@ -1,6 +1,8 @@
 package com.acme.salarymanagement.employee.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,14 +55,16 @@ class SalaryControllerTest {
 
     @Test
     void a_pay_change_returns_the_employee_as_they_now_are() throws Exception {
-        mvc.perform(put("/api/v1/employees/{id}/salary", EMPLOYEE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                                """
+        mvc.perform(
+                        put("/api/v1/employees/{id}/salary", EMPLOYEE)
+                                .with(jwt().jwt(token -> token.subject(ACTOR.toString())))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
                                 {"amount":"1380000.00","currency":"INR","reason":"MERIT",
-                                 "note":"Annual merit review","actorId":"%s"}
-                                """
-                                        .formatted(ACTOR)))
+                                 "note":"Annual merit review"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.salary.amount").value("1380000.00"))
                 .andExpect(jsonPath("$.salary.amount").isString())
@@ -69,14 +73,16 @@ class SalaryControllerTest {
 
     @Test
     void the_reason_the_actor_and_the_note_all_reach_the_use_case() throws Exception {
-        mvc.perform(put("/api/v1/employees/{id}/salary", EMPLOYEE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                                """
+        mvc.perform(
+                        put("/api/v1/employees/{id}/salary", EMPLOYEE)
+                                .with(jwt().jwt(token -> token.subject(ACTOR.toString())))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
                                 {"amount":"1380000.00","currency":"INR","reason":"PROMOTION",
-                                 "note":"Promoted to lead","actorId":"%s"}
-                                """
-                                        .formatted(ACTOR)))
+                                 "note":"Promoted to lead"}
+                                """))
                 .andExpect(status().isOk());
 
         var command = LAST_COMMAND.get();
@@ -89,6 +95,8 @@ class SalaryControllerTest {
     @Test
     void a_change_without_a_reason_is_refused_before_it_reaches_the_domain() throws Exception {
         mvc.perform(put("/api/v1/employees/{id}/salary", EMPLOYEE)
+                        .with(jwt().jwt(token -> token.subject(ACTOR.toString())))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
                                 """
@@ -99,22 +107,30 @@ class SalaryControllerTest {
     }
 
     @Test
-    void a_change_with_nobody_making_it_is_refused() throws Exception {
-        // No default actor, ever: a revision credited to an invented system user answers
-        // "who changed this" with a fiction.
+    void the_actor_comes_from_the_token_and_cannot_be_named_in_the_body() throws Exception {
         mvc.perform(
                         put("/api/v1/employees/{id}/salary", EMPLOYEE)
+                                .with(jwt().jwt(token -> token.subject(ACTOR.toString())))
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
+                                // Somebody else's id, offered in the body. It is not a field of the
+                                // request, so it is not read: a caller cannot launder a pay change
+                                // through another person's name.
                                 .content(
                                         """
-                                {"amount":"1380000.00","currency":"INR","reason":"MERIT"}
+                                {"amount":"1380000.00","currency":"INR","reason":"MERIT",
+                                 "actorId":"99999999-9999-4999-8999-999999999999"}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
+
+        assertThat(LAST_COMMAND.get().actor()).isEqualTo(new UserId(ACTOR));
     }
 
     @Test
     void changing_the_pay_of_somebody_who_is_not_here_is_a_404() throws Exception {
         mvc.perform(put("/api/v1/employees/{id}/salary", ABSENTEE)
+                        .with(jwt().jwt(token -> token.subject(ACTOR.toString())))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
                                 """
@@ -127,7 +143,8 @@ class SalaryControllerTest {
 
     @Test
     void the_log_comes_back_newest_first_with_both_amounts() throws Exception {
-        mvc.perform(get("/api/v1/employees/{id}/salary-revisions", EMPLOYEE))
+        mvc.perform(get("/api/v1/employees/{id}/salary-revisions", EMPLOYEE)
+                        .with(jwt().jwt(token -> token.subject(ACTOR.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].newAmount.amount").value("1380000.00"))

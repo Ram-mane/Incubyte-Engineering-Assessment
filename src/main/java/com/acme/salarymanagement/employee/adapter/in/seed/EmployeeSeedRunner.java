@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.acme.salarymanagement.employee.application.port.in.StoreEmployees;
@@ -23,6 +24,7 @@ import com.acme.salarymanagement.employee.application.port.in.StoreEmployees;
  */
 @Component
 @Profile("seed")
+@Order(2)
 class EmployeeSeedRunner implements ApplicationRunner {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmployeeSeedRunner.class);

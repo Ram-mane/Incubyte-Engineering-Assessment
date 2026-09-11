@@ -3,6 +3,8 @@ package com.acme.salarymanagement.employee.adapter.in.web;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalary;
 import com.acme.salarymanagement.employee.application.port.in.GetSalaryRevisions;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
+import com.acme.salarymanagement.employee.domain.UserId;
 
 /**
  * Pay, and the record of it changing.
@@ -38,8 +41,12 @@ class SalaryController {
     }
 
     @PutMapping("/salary")
-    EmployeeResponse change(@PathVariable UUID id, @RequestBody ChangeSalaryRequest request) {
-        return EmployeeResponse.of(changeSalary.change(request.toCommand(id)));
+    EmployeeResponse change(
+            @PathVariable UUID id, @RequestBody ChangeSalaryRequest request, @AuthenticationPrincipal Jwt caller) {
+        // The actor is the token's subject, never a field in the body. A caller who could name
+        // somebody else as the author of a pay change could launder one through the audit log.
+        UserId actor = new UserId(UUID.fromString(caller.getSubject()));
+        return EmployeeResponse.of(changeSalary.change(request.toCommand(id, actor)));
     }
 
     @GetMapping("/salary-revisions")

@@ -2,6 +2,7 @@ package com.acme.salarymanagement.employee.application.service;
 
 import java.time.Clock;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,7 @@ class ChangeSalaryService implements ChangeSalary {
     }
 
     @Override
+    @PreAuthorize("hasRole('HR_MANAGER')")
     @Transactional
     public EmployeeSummary change(ChangeSalaryCommand command) {
         // Checked rather than trusted, and never defaulted: a revision attributed to a user who

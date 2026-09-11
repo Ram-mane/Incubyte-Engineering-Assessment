@@ -26,6 +26,12 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
+security:
+  jwt:
+    # No default. A fallback secret committed to a repository is a published secret, and this one
+    # signs the tokens that authorise payroll changes. SecurityConfig refuses to start without it.
+    secret: ${JWT_SECRET:}
+
 server:
   # The platform assigns the port; 8080 is the local default.
   port: ${PORT:8080}

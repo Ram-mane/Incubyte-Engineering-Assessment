@@ -2,6 +2,7 @@ package com.acme.salarymanagement.employee.application.service;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ class GetSalaryRevisionsService implements GetSalaryRevisions {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('HR_MANAGER','HR_ANALYST')")
     @Transactional(readOnly = true)
     public List<SalaryRevisionView> of(EmployeeId employeeId, int limit) {
         if (limit < SHORTEST_LOG) {
