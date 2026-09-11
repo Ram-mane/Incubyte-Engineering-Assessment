@@ -4,7 +4,9 @@ import java.time.LocalDate;
 
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
+import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
+import com.acme.salarymanagement.shared.SeniorityLevel;
 
 /**
  * Object Mother for employees, so a test reads as the scenario it describes rather than as
@@ -62,6 +64,11 @@ final class EmployeeMother {
 
     EmployeeMother earning(String amount) {
         this.salary = Money.of(amount, country.currency());
+        return this;
+    }
+
+    EmployeeMother earningExactly(com.acme.salarymanagement.shared.Money value) {
+        this.salary = value;
         return this;
     }
 
