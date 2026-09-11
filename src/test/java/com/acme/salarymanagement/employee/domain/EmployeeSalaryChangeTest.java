@@ -6,9 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.acme.salarymanagement.shared.CurrencyCode;
 import com.acme.salarymanagement.shared.Money;
@@ -72,7 +77,16 @@ class EmployeeSalaryChangeTest {
             SalaryRevision revision =
                     alice.changeSalaryTo(rupees("1380000.00"), ChangeReason.MERIT, HR_MANAGER, NOTE, WHEN);
 
-            assertThat(revision).isNotNull();
+            assertThat(revision)
+                    .as("the revision describes this change and nothing else")
+                    .isEqualTo(new SalaryRevision(
+                            alice.id(),
+                            rupees("1200000.00"),
+                            rupees("1380000.00"),
+                            ChangeReason.MERIT,
+                            HR_MANAGER,
+                            WHEN,
+                            NOTE));
         }
 
         @Test
@@ -210,6 +224,37 @@ class EmployeeSalaryChangeTest {
     }
 
     @Nested
+    class OutsideIndia {
+
+        // Until this existed every employee in the suite was Indian, so replacing
+        // country.currency() with the literal "INR" passed one hundred and four tests: I9 was a
+        // test that a hardcoded string equalled itself.
+
+        @Test
+        void an_employee_in_germany_is_paid_and_re_paid_in_euros() {
+            var klaus = anEmployee().inGermany().build();
+
+            var revision =
+                    klaus.changeSalaryTo(Money.of("92000.00", EUR), ChangeReason.PROMOTION, HR_MANAGER, NOTE, WHEN);
+
+            assertThat(klaus.currentSalary()).isEqualTo(Money.of("92000.00", EUR));
+            assertThat(revision.previousAmount()).isEqualTo(Money.of("85000.00", EUR));
+        }
+
+        @Test
+        void an_employee_in_germany_cannot_be_moved_to_rupees() {
+            var klaus = anEmployee().inGermany().build();
+
+            assertThatThrownBy(() ->
+                            klaus.changeSalaryTo(rupees("1380000.00"), ChangeReason.MERIT, HR_MANAGER, NOTE, WHEN))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("DE")
+                    .hasMessageContaining("EUR")
+                    .hasMessageContaining("INR");
+        }
+    }
+
+    @Nested
     class WhatItRefuses {
 
         @Test
@@ -305,18 +350,70 @@ class EmployeeSalaryChangeTest {
                     .hasMessageContaining("TERMINATED");
         }
 
-        @Test
-        void a_rejected_change_leaves_the_salary_exactly_as_it_was() {
-            // The invariant behind every rejection above: refusing must not half-apply. An
-            // aggregate that mutates and then throws leaves the caller holding a changed employee
-            // and no revision to record it.
-            var alice = anEmployee().inIndia().earning("1200000.00").build();
+        /**
+         * The invariant behind every rejection above, over all five of them rather than one.
+         *
+         * <p>Refusing must not half-apply. Asserting this on the currency path alone let the
+         * assignment move above the other guards while forty-one tests stayed green: a terminated
+         * employee's pay moved, a zero salary was applied, and the exception was thrown afterwards
+         * with no revision to account for it.
+         */
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("everyRejection")
+        void a_rejected_change_moves_nothing_and_records_nothing(
+                String scenario,
+                EmploymentStatus status,
+                Money attempted,
+                ChangeReason reason,
+                Class<? extends Throwable> expected) {
 
-            assertThatThrownBy(() ->
-                            alice.changeSalaryTo(Money.of("45000.00", EUR), ChangeReason.MERIT, HR_MANAGER, NOTE, WHEN))
-                    .isInstanceOf(IllegalArgumentException.class);
+            var alice =
+                    anEmployee().inIndia().earning("1200000.00").status(status).build();
+            AtomicReference<SalaryRevision> produced = new AtomicReference<>();
 
-            assertThat(alice.currentSalary()).isEqualTo(rupees("1200000.00"));
+            assertThatThrownBy(() -> produced.set(alice.changeSalaryTo(attempted, reason, HR_MANAGER, NOTE, WHEN)))
+                    .isInstanceOf(expected);
+
+            assertThat(produced.get())
+                    .as("a refused change must produce no revision at all")
+                    .isNull();
+            assertThat(alice.currentSalary())
+                    .as("a refused change must leave the salary exactly as it was")
+                    .isEqualTo(rupees("1200000.00"));
+        }
+
+        static Stream<Arguments> everyRejection() {
+            return Stream.of(
+                    Arguments.of(
+                            "zero",
+                            EmploymentStatus.ACTIVE,
+                            Money.of("0.00", INR),
+                            ChangeReason.CORRECTION,
+                            IllegalArgumentException.class),
+                    Arguments.of(
+                            "negative",
+                            EmploymentStatus.ACTIVE,
+                            Money.of("-1.00", INR),
+                            ChangeReason.CORRECTION,
+                            IllegalArgumentException.class),
+                    Arguments.of(
+                            "same amount, a no-op",
+                            EmploymentStatus.ACTIVE,
+                            Money.of("1200000.00", INR),
+                            ChangeReason.MERIT,
+                            IllegalArgumentException.class),
+                    Arguments.of(
+                            "a currency the country does not pay in",
+                            EmploymentStatus.ACTIVE,
+                            Money.of("45000.00", EUR),
+                            ChangeReason.MERIT,
+                            IllegalArgumentException.class),
+                    Arguments.of(
+                            "a terminated employee",
+                            EmploymentStatus.TERMINATED,
+                            Money.of("1380000.00", INR),
+                            ChangeReason.MERIT,
+                            IllegalStateException.class));
         }
     }
 }

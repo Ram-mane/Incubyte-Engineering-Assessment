@@ -128,8 +128,25 @@ The last two exist because `equals`, `hashCode` and `toString` are excluded from
 the domain is excluded with them. Identity equality decides whether an aggregate is the same
 aggregate after a change, so it is verified by hand rather than left uncovered.
 
+Two further blind spots, found by auditing the tests rather than reading the score:
+
+- **The score says nothing about any null guard in this codebase.** `Objects.requireNonNull(Object,
+  String)` returns a value, so Pitest's `VOID_METHOD_CALLS` mutator does not remove it. Deleting a
+  `requireNonNull` is not a mutation any default mutator performs — every null guard is covered by
+  example tests or not at all.
+- **The score says nothing about `Money`'s arithmetic.** `BigDecimal.add`, `subtract` and `multiply`
+  are method calls rather than bytecode operators, so no MATH mutator applies to a single line of
+  `Money`. The arithmetic rests entirely on the example tests, which is fine because they are
+  thorough — but it is not the mutation score that is protecting it.
+
+The rounding probes above also under-report what the tests do. `MoneyTest$Rounding` and `$Scale`
+together kill **all seven** alternative rounding modes deterministically, not only `HALF_UP`:
+`2.005 → 2.00` kills UP, CEILING and HALF_UP; `2.015 → 2.02` kills DOWN, FLOOR and HALF_DOWN;
+`1234.567 → 1234.57` kills UNNECESSARY; `-2.005 → -2.00` pins the negative-half direction.
+
 An automated number covering part of the code, plus a recorded manual probe covering the rest, is
-honest. An automated number quoted as if it covered everything is not.
+honest. An automated number quoted as if it covered everything is not - and the README must not
+quote 90% without these caveats.
 
 Line coverage says a line ran. Mutation coverage says that if the line were wrong, a test would
 notice. For a system that computes people's pay, that distinction is the whole point — and it is a

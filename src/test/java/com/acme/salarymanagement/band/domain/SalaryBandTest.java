@@ -120,10 +120,44 @@ class SalaryBandTest {
                     .isInstanceOf(CurrencyMismatchException.class);
         }
 
+        // One test per bound. The original set all three to zero at once, so narrowing the guard
+        // to the midpoint alone - the only bound the ratio divides by - passed all twenty tests.
+
         @Test
-        void a_band_whose_midpoint_is_zero_is_rejected_because_no_salary_can_be_compared_to_it() {
+        void a_band_with_a_zero_minimum_is_rejected() {
             assertThatThrownBy(() -> new SalaryBand(
-                            ENGINEER, SeniorityLevel.SENIOR, INDIA, rupees("0.00"), rupees("0.00"), rupees("0.00")))
+                            ENGINEER,
+                            SeniorityLevel.SENIOR,
+                            INDIA,
+                            rupees("0.00"),
+                            rupees("1250000.00"),
+                            rupees("1500000.00")))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("greater than zero");
+        }
+
+        @Test
+        void a_band_with_a_zero_midpoint_is_rejected() {
+            assertThatThrownBy(() -> new SalaryBand(
+                            ENGINEER,
+                            SeniorityLevel.SENIOR,
+                            INDIA,
+                            rupees("1000000.00"),
+                            rupees("0.00"),
+                            rupees("1500000.00")))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("greater than zero");
+        }
+
+        @Test
+        void a_band_with_a_zero_maximum_is_rejected() {
+            assertThatThrownBy(() -> new SalaryBand(
+                            ENGINEER,
+                            SeniorityLevel.SENIOR,
+                            INDIA,
+                            rupees("1000000.00"),
+                            rupees("1250000.00"),
+                            rupees("0.00")))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("greater than zero");
         }

@@ -35,13 +35,19 @@ class SalaryChangeAuditChainPropertyTest {
     void the_audit_chain_accounts_for_every_accepted_change(@ForAll("salaryHistories") List<Money> amounts) {
         var alice = anEmployee().inIndia().earningExactly(STARTING_SALARY).build();
 
+        // Rejected attempts are interleaved deliberately. Counting only successes made the size
+        // assertion unfalsifiable - the loop added one element per amount, so it could fail only
+        // if changeSalaryTo threw. A no-op that wrongly returned a revision now lengthens the log
+        // and the count catches it.
         List<SalaryRevision> revisions = new ArrayList<>();
         for (Money amount : amounts) {
-            revisions.add(alice.changeSalaryTo(amount, ChangeReason.MERIT, HR_MANAGER, null, WHEN));
+            record(revisions, alice, alice.currentSalary());
+            record(revisions, alice, Money.of("0.00", INR));
+            record(revisions, alice, amount);
         }
 
         assertThat(revisions)
-                .as("one revision per accepted change, no more and no fewer")
+                .as("one revision per accepted change, and none for the rejected ones")
                 .hasSameSizeAs(amounts);
 
         assertThat(revisions.get(0).previousAmount())
@@ -61,6 +67,15 @@ class SalaryChangeAuditChainPropertyTest {
         assertThat(revisions)
                 .as("every revision belongs to the employee whose pay moved")
                 .allSatisfy(revision -> assertThat(revision.employeeId()).isEqualTo(alice.id()));
+    }
+
+    /** Appends whatever the aggregate returns, so a revision produced by a refused change counts. */
+    private void record(List<SalaryRevision> revisions, Employee employee, Money amount) {
+        try {
+            revisions.add(employee.changeSalaryTo(amount, ChangeReason.MERIT, HR_MANAGER, null, WHEN));
+        } catch (IllegalArgumentException | IllegalStateException refused) {
+            // a refused change must leave no trace, which the size assertion checks
+        }
     }
 
     /**

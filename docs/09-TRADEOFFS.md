@@ -65,3 +65,20 @@ solved by stateless instances plus read replicas, not by decomposition.
 4. Total-rewards components as typed siblings of base pay.
 5. Async import with a transactional outbox.
 6. Refresh-token rotation and server-side revocation.
+
+## Test gaps left open, and why
+
+A test audit after Day 1 applied ten mutations to the domain and eight survived. The three that
+mattered were closed immediately - the rejection paths, I9 outside India, and the band's bounds.
+These were judged real but not worth the time before Day 2, and are listed so nobody has to
+rediscover them:
+
+| Gap | Surviving mutation | Why deferred |
+|---|---|---|
+| `SalaryBandTest` has no null-argument tests | Delete `requireNonNull(country, ...)` from `SalaryBand` — 20/20 still pass | The same shape as `EmployeeTest`'s thirteen null tests, which exist. Mechanical to add, no new insight |
+| No `JobTitleTest`, no `PersonNameTest` | Delete `JobTitle`'s trim-and-blank guard — 123/123 still pass | `PersonName` has no validation at all, so a test would be asserting nothing until it does |
+| `EmailAddressTest` never uses surrounding whitespace | Drop `.trim()` — the address is stored verbatim and stops matching its trimmed form | `EmployeeNumberTest` covers exactly this case; the omission is an oversight rather than a decision |
+| Compa-ratio rounding mode is not pinned | `HALF_EVEN` → `CEILING` — 20/20 still pass, because the only inexact fixture rounds the same way under both | Matters because the ratio is rounded *before* it is compared to 0.9 and 1.1, so the mode can flip a classification. Needs one fixture whose remainder is below the half |
+| Band classification has no case at exactly `max`, and no band where `BELOW_MIN` and `LOW` disagree | `> max` → `>= max` dies only via a degenerate all-equal-bounds band in another nest | The documented rule "below the minimum is `BELOW_MIN` whatever the compa-ratio" is exercised only where both rules agree |
+| `EmployeeTest` asserts the Object Mother's defaults | Hardcode `level()` to return `SENIOR` — 41/41 still pass | `inEngineering()` and `asSeniorEngineer()` set values identical to the defaults, so they vary nothing |
+| The FX normalisation properties are documentation | P2's bound is one-sided and passes if the drift is exactly zero; P1's reference re-implements `convertTo` | Their genuine catch, a wrong rounding mode, is killed deterministically by `MoneyTest$Rounding` anyway |

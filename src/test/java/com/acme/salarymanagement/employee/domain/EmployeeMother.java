@@ -113,6 +113,11 @@ final class EmployeeMother {
         return this;
     }
 
+    EmployeeMother status(EmploymentStatus value) {
+        this.status = value;
+        return this;
+    }
+
     EmployeeMother terminated() {
         this.status = EmploymentStatus.TERMINATED;
         return this;
