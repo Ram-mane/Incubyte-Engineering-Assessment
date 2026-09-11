@@ -18,6 +18,14 @@
       maintenance signal that means nothing, which is worse than its absence.
     -->
     <exclude name="MissingSerialVersionUID"/>
+    <!--
+      AvoidFieldNameMatchingMethodName fires on every accessor named after its field - which is
+      the convention this codebase uses everywhere, because that is what a record generates.
+      Every record here already has that shape; PMD cannot see generated accessors, so the rule
+      only ever fires on the one aggregate written by hand. Renaming Employee.id() to getId() to
+      satisfy it would make the hand-written class the odd one out.
+    -->
+    <exclude name="AvoidFieldNameMatchingMethodName"/>
   </rule>
 
   <!-- Kept everywhere else: a genuinely serialised class does need one. -->
