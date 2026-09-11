@@ -48,7 +48,10 @@ sufficient (see `docs/adr/0002-current-salary-with-audit-log.md`). Do not reintr
   conversion and no "default currency" anywhere.
 - **Aggregate in SQL, never in Java.** If you are about to load a list of entities to sum, average or
   group them, stop and write a query returning a projection record.
-- **No N+1.** Integration tests count statements and fail if the count exceeds what the test declares.
+- **No N+1.** Integration tests count statements and fail if the count exceeds what the test
+  declares. The counting is real and lives in `support/CountingDataSource`, which wraps the
+  application's pool and counts every `execute` at the JDBC boundary — until 2.6 this line
+  described a harness that did not exist (D104).
 - **Never `PATCH` a salary.** `PATCH /employees/{id}` handles profile fields only; pay changes go
   through `PUT /employees/{id}/salary` with a mandatory reason.
 - **Parameterised queries only**, including hand-written analytics SQL.

@@ -17,6 +17,7 @@ import com.acme.salarymanagement.employee.application.port.out.EmployeeDirectory
 import com.acme.salarymanagement.employee.application.port.out.EmployeeSummary;
 import com.acme.salarymanagement.shared.CurrencyCode;
 import com.acme.salarymanagement.shared.Money;
+import com.acme.salarymanagement.support.CountingDataSource;
 import com.acme.salarymanagement.support.PostgresIntegrationTest;
 
 /**
@@ -88,6 +89,27 @@ class EmployeeDirectoryIT extends PostgresIntegrationTest {
     void the_count_is_of_everyone_not_of_the_page() {
         assertThat(directory.findPage(0, 2)).hasSize(2);
         assertThat(directory.count()).isEqualTo(othersAlreadyHere + 3);
+    }
+
+    @Test
+    void a_page_costs_one_statement_however_many_people_are_on_it() {
+        long statements = CountingDataSource.statementsIssuedBy(() -> directory.findPage(0, 50));
+
+        // The number that must not grow with the page. A mapper that fetched a department name,
+        // a band or a revision per row would read identically and cost fifty-one.
+        assertThat(statements)
+                .as("one page, one query - whatever the page size")
+                .isEqualTo(1);
+    }
+
+    @Test
+    void asking_who_is_on_the_page_and_how_many_there_are_costs_two_statements() {
+        long statements = CountingDataSource.statementsIssuedBy(() -> {
+            directory.findPage(0, 50);
+            directory.count();
+        });
+
+        assertThat(statements).isEqualTo(2);
     }
 
     /** The three this test inserted, in the order the directory returns them. */
