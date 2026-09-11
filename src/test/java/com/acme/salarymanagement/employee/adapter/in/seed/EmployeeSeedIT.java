@@ -2,12 +2,15 @@ package com.acme.salarymanagement.employee.adapter.in.seed;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.acme.salarymanagement.employee.application.port.out.EmployeeDirectoryRepository;
+import com.acme.salarymanagement.employee.application.port.out.EmployeeWriteRepository;
 import com.acme.salarymanagement.support.PostgresIntegrationTest;
 
 /**
@@ -19,10 +22,24 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
  */
 @ActiveProfiles("seed")
 @SpringBootTest(properties = "seed.employees=25")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EmployeeSeedIT extends PostgresIntegrationTest {
 
     @Autowired
     private EmployeeDirectoryRepository directory;
+
+    @Autowired
+    private EmployeeWriteRepository employees;
+
+    /**
+     * The container is shared by the whole suite, and these rows are committed rather than rolled
+     * back - the seed runs at context startup, outside any test transaction. Leaving twenty-five
+     * people behind makes every later test that counts rows depend on which class ran first.
+     */
+    @AfterAll
+    void the_seeded_org_does_not_outlive_this_test() {
+        employees.deleteEveryone();
+    }
 
     @Test
     void the_seeded_org_is_there_to_be_read() {
