@@ -1,0 +1,33 @@
+.directory {
+  padding: 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__count {
+    color: rgba(0, 0, 0, 0.6);
+    margin: 0;
+  }
+
+  &__error {
+    color: #b3261e;
+  }
+
+  &__table {
+    width: 100%;
+  }
+
+  // Figures line up on the decimal point when they are right-aligned and tabular; a column of
+  // salaries that does not line up is a column nobody can scan.
+  &__salary {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
