@@ -17,9 +17,30 @@ export interface Employee {
   readonly salary: Money;
 }
 
+/**
+ * A page of the directory. `nextCursor` is absent on the last page and `totalApprox` on every
+ * page but the first — absent, not null, which is why both are optional here.
+ */
 export interface EmployeePage {
   readonly items: readonly Employee[];
-  readonly page: number;
-  readonly size: number;
-  readonly total: number;
+  readonly nextCursor?: string;
+  readonly totalApprox?: number;
+}
+
+export interface DirectoryFilterOptions {
+  readonly countries: readonly string[];
+  readonly departments: readonly string[];
+  readonly jobTitles: readonly string[];
+  readonly levels: readonly string[];
+}
+
+/** What the screen asks for. Every field optional: the unfiltered first page sets none of them. */
+export interface DirectoryQuery {
+  readonly q?: string;
+  readonly country?: string;
+  readonly department?: string;
+  readonly jobTitle?: string;
+  readonly level?: string;
+  readonly cursor?: string;
+  readonly limit?: number;
 }

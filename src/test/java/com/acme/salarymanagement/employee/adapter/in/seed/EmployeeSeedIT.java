@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.acme.salarymanagement.employee.application.port.in.DirectoryFilters;
 import com.acme.salarymanagement.employee.application.port.out.EmployeeDirectoryRepository;
 import com.acme.salarymanagement.employee.application.port.out.EmployeeWriteRepository;
 import com.acme.salarymanagement.support.PostgresIntegrationTest;
@@ -43,12 +44,12 @@ class EmployeeSeedIT extends PostgresIntegrationTest {
 
     @Test
     void the_seeded_org_is_there_to_be_read() {
-        assertThat(directory.count()).isEqualTo(25);
+        assertThat(directory.count(DirectoryFilters.none(), null)).isEqualTo(25);
     }
 
     @Test
     void a_seeded_employee_arrives_whole() {
-        var someone = directory.findPage(0, 1).get(0);
+        var someone = directory.findPage(DirectoryFilters.none(), null, null, 1).get(0);
 
         assertThat(someone.employeeNumber()).startsWith("E");
         assertThat(someone.email()).endsWith("@acme.example");
@@ -62,7 +63,7 @@ class EmployeeSeedIT extends PostgresIntegrationTest {
     void seeding_twice_leaves_the_same_org_rather_than_two(@Autowired EmployeeSeedRunner runner) {
         runner.seed(25);
 
-        assertThat(directory.count())
+        assertThat(directory.count(DirectoryFilters.none(), null))
                 .as("a seed is a known world, not an increment")
                 .isEqualTo(25);
     }

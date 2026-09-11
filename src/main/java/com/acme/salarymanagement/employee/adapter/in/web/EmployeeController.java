@@ -5,17 +5,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.acme.salarymanagement.employee.application.port.in.DirectoryCursor;
+import com.acme.salarymanagement.employee.application.port.in.DirectoryFilterOptions;
+import com.acme.salarymanagement.employee.application.port.in.DirectoryFilters;
+import com.acme.salarymanagement.employee.application.port.in.DirectoryRequest;
 import com.acme.salarymanagement.employee.application.port.in.ListEmployees;
+import com.acme.salarymanagement.shared.CountryCode;
+import com.acme.salarymanagement.shared.Department;
+import com.acme.salarymanagement.shared.JobTitle;
+import com.acme.salarymanagement.shared.SeniorityLevel;
 
 /**
- * The directory endpoint. No filters, no search, no auth yet - those are 2.6 and 2.9. What it
- * does have is server-side paging, because the alternative is ten thousand rows on the wire.
+ * The directory endpoint: filtered, searched, keyset-paged. Authentication is 2.9.
+ *
+ * <p>Each filter is parsed into its own type here, at the edge, so {@code ?country=XX} is refused
+ * as a bad request rather than travelling inward as a string that matches nobody.
  */
 @RestController
 @RequestMapping("/api/v1/employees")
 class EmployeeController {
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
+    private static final int DEFAULT_LIMIT = 50;
 
     private final ListEmployees listEmployees;
 
@@ -25,7 +35,29 @@ class EmployeeController {
 
     @GetMapping
     EmployeePageResponse list(
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size) {
-        return EmployeePageResponse.of(listEmployees.list(page, size));
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String jobTitle,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "" + DEFAULT_LIMIT) int limit) {
+
+        DirectoryFilters filters = new DirectoryFilters(
+                country == null ? null : new CountryCode(country),
+                department == null ? null : new Department(department),
+                jobTitle == null ? null : new JobTitle(jobTitle),
+                level == null ? null : SeniorityLevel.valueOf(level.toUpperCase(java.util.Locale.ROOT)));
+
+        DirectoryRequest request =
+                new DirectoryRequest(q, filters, cursor == null ? null : DirectoryCursor.decode(cursor), limit);
+
+        return EmployeePageResponse.of(listEmployees.list(request));
+    }
+
+    /** What the filter controls should offer. Derived from the directory, not configured. */
+    @GetMapping("/filter-options")
+    DirectoryFilterOptions filterOptions() {
+        return listEmployees.filterOptions();
     }
 }

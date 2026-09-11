@@ -20,8 +20,40 @@
     color: #b3261e;
   }
 
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin: 0.5rem 0 0.25rem;
+  }
+
+  &__search {
+    flex: 1 1 18rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    // Material form fields reserve space for a hint line; this lifts the buttons onto the same
+    // baseline as the controls rather than the space beneath them.
+    margin-bottom: 1.25rem;
+  }
+
   &__table {
     width: 100%;
+  }
+
+  &__pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  &__page-number {
+    color: rgba(0, 0, 0, 0.6);
   }
 
   // Figures line up on the decimal point when they are right-aligned and tabular; a column of

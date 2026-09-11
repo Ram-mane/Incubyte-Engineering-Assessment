@@ -11,7 +11,9 @@ source of truth; Springdoc verifies the running app matches it.
   JavaScript client can silently lose precision on a large number. Never a bare float.
 - Dates are ISO-8601 `YYYY-MM-DD`; timestamps are RFC 3339 UTC.
 - Errors are RFC 7807 `application/problem+json`.
-- Collections return `{ "items": [...], "nextCursor": "...", "totalApprox": 10000 }`.
+- Collections return `{ "items": [...], "nextCursor": "...", "totalApprox": 10000 }`. Both optional
+  fields are **omitted** rather than null: absent means "no next page" and "not recounted here".
+  The wire contract is in [openapi.yaml](../openapi.yaml), which describes only what is built.
 - Writes require `Idempotency-Key` on salary changes.
 - `ETag` / `If-Match` on employee updates for optimistic concurrency.
 
@@ -20,7 +22,7 @@ source of truth; Springdoc verifies the running app matches it.
 ### Employees
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/employees` | `?q=&department=&country=&level=&status=&cursor=&limit=` — keyset paged |
+| `GET` | `/employees` | `?q=&department=&country=&jobTitle=&level=&cursor=&limit=` — keyset paged. Returns `{items, nextCursor, totalApprox}`; `nextCursor` is absent on the last page and `totalApprox` on every page but the first. `status` is deliberately not a filter: every employee in the directory is shown, and hiding terminated colleagues behind a default would make the count mean something different from what it says |
 | `GET` | `/employees/{id}` | includes current salary + band position |
 | `POST` | `/employees` | onboard; requires an initial salary in the same command |
 | `PATCH` | `/employees/{id}` | profile fields only — **never** salary |

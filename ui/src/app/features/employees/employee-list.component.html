@@ -6,10 +6,62 @@
         Showing {{ directory.firstOnPage() }}–{{ directory.lastOnPage() }} of
         {{ directory.total() | number }} employees
       } @else if (!directory.isLoading() && !directory.hasFailed()) {
-        No employees yet
+        No employees match these filters
       }
     </p>
   </header>
+
+  <form class="directory__filters" (ngSubmit)="apply()">
+    <mat-form-field appearance="outline" class="directory__search">
+      <mat-label>Search name or email</mat-label>
+      <input matInput [ngModel]="q()" (ngModelChange)="q.set($event)" name="q" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Country</mat-label>
+      <mat-select [ngModel]="country()" (ngModelChange)="country.set($event)" name="country">
+        <mat-option value="">Any country</mat-option>
+        @for (option of directory.filterOptions().countries; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Department</mat-label>
+      <mat-select [ngModel]="department()" (ngModelChange)="department.set($event)" name="department">
+        <mat-option value="">Any department</mat-option>
+        @for (option of directory.filterOptions().departments; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Job title</mat-label>
+      <mat-select [ngModel]="jobTitle()" (ngModelChange)="jobTitle.set($event)" name="jobTitle">
+        <mat-option value="">Any job title</mat-option>
+        @for (option of directory.filterOptions().jobTitles; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Level</mat-label>
+      <mat-select [ngModel]="level()" (ngModelChange)="level.set($event)" name="level">
+        <mat-option value="">Any level</mat-option>
+        @for (option of directory.filterOptions().levels; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="directory__actions">
+      <button mat-flat-button type="submit">Apply</button>
+      <button mat-button type="button" (click)="clear()">Clear</button>
+    </div>
+  </form>
 
   @if (directory.isLoading()) {
     <mat-progress-bar mode="indeterminate" aria-label="Loading employees" />
@@ -63,12 +115,23 @@
     <tr mat-row *matRowDef="let row; columns: columns"></tr>
   </table>
 
-  <mat-paginator
-    [length]="directory.total()"
-    [pageSize]="directory.size()"
-    [pageIndex]="directory.page()"
-    [pageSizeOptions]="pageSizes"
-    (page)="onPage($event)"
-    aria-label="Select a page of employees"
-  />
+  <nav class="directory__pager" aria-label="Directory pages">
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="directory.previousPage()"
+      [disabled]="!directory.hasPreviousPage() || directory.isLoading()"
+    >
+      Previous
+    </button>
+    <span class="directory__page-number">Page {{ directory.pageNumber() }}</span>
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="directory.nextPage()"
+      [disabled]="!directory.hasNextPage() || directory.isLoading()"
+    >
+      Next
+    </button>
+  </nav>
 </section>

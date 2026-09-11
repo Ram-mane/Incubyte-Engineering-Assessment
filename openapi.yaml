@@ -1,0 +1,226 @@
+openapi: 3.1.0
+
+info:
+  title: CompensationIQ API
+  version: "1.0.0"
+  description: |
+    Salary management and compensation analytics.
+
+    This document describes what is **implemented**, not what is planned: an OpenAPI file that
+    describes endpoints nobody can call is a specification of nothing. Endpoints arrive here as
+    they are built, and `docs/04-API-DESIGN.md` holds the shape of the ones that have not been.
+
+    Two conventions run through everything below.
+
+    **Money is an object with a string amount.** `{"amount": "1200000.00", "currency": "INR"}`,
+    never a bare number: a JSON number is a double in every browser client, and a large salary
+    loses its last digits on the way through one. The currency travels with the amount because
+    salaries are held in the employee's own currency and this system has no default currency.
+
+    **Collections are keyset-paged.** A page is not a numbered position in a result set; it is a
+    place to resume from, given as an opaque `nextCursor`. There is no page number and no page
+    count, because with this strategy there is nothing honest to put in them.
+
+servers:
+  - url: /api/v1
+
+paths:
+  /employees:
+    get:
+      summary: The employee directory, filtered, searched and paged
+      description: |
+        Returns one page of employees in a total order of `(family name, given name, id)`.
+
+        Paging is by cursor. Ask for the first page without one, then pass the `nextCursor` from
+        each response to get the next. When `nextCursor` is absent, that was the last page. The
+        cursor is opaque and must not be constructed or parsed by a client: it encodes the whole
+        sort key, and the sort key is free to change.
+      operationId: listEmployees
+      parameters:
+        - name: q
+          in: query
+          description: |
+            Free text matched anywhere within the employee's name or email address, case
+            insensitively. Fragments match: `handr` finds Chandra.
+          required: false
+          schema: { type: string }
+          example: kapoor
+        - name: country
+          in: query
+          description: ISO-3166 alpha-2. An unknown code is a 400, not an empty page.
+          required: false
+          schema: { type: string, minLength: 2, maxLength: 2 }
+          example: IN
+        - name: department
+          in: query
+          required: false
+          schema: { type: string }
+          example: Engineering
+        - name: jobTitle
+          in: query
+          required: false
+          schema: { type: string }
+          example: Software Engineer
+        - name: level
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SeniorityLevel'
+        - name: cursor
+          in: query
+          description: The `nextCursor` from the previous response. Omit for the first page.
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          description: |
+            How many employees to return. Capped at 200 server-side: one request for the whole
+            table is what pagination exists to prevent.
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: A page of employees
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeePage'
+        "400":
+          description: |
+            A filter value that cannot exist, or a cursor this API did not issue.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /employees/filter-options:
+    get:
+      summary: What there is to filter the directory by
+      description: |
+        Derived from the people in the directory rather than configured, so a department nobody
+        works in cannot be chosen and a new one appears without a deployment. Levels are the
+        exception: that list belongs to the domain, not to whoever happens to be employed.
+      operationId: directoryFilterOptions
+      responses:
+        "200":
+          description: The values the filter controls should offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryFilterOptions'
+
+components:
+  schemas:
+
+    DirectoryFilterOptions:
+      type: object
+      required: [countries, departments, jobTitles, levels]
+      properties:
+        countries:
+          type: array
+          items: { type: string, minLength: 2, maxLength: 2 }
+          example: [AU, DE, GB, IN, SG, US]
+        departments:
+          type: array
+          items: { type: string }
+          example: [Customer Success, Design, Engineering, Finance, Marketing, People, Product, Sales]
+        jobTitles:
+          type: array
+          items: { type: string }
+        levels:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeniorityLevel'
+
+    EmployeePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Employee'
+        nextCursor:
+          type: string
+          description: |
+            Where to resume. **Absent on the last page** - absent means there is no next page,
+            which is why it is omitted rather than sent as null.
+          example: S2Fwb29yCkFsaWNlCjExMTExMTExLTExMTEtMTExMS0xMTExLTExMTExMTExMTExMQ
+        totalApprox:
+          type: integer
+          format: int64
+          description: |
+            How many employees match the filters. **Present on the first page only** - it is not
+            recounted for every page, which is the cost keyset paging exists to avoid.
+
+            Named `approx` deliberately. Today, at ten thousand employees, it is an exact count
+            off the same indexes and costs a few milliseconds. When the table is large enough for
+            that to hurt it becomes an estimate from `pg_class.reltuples`, and no client changes,
+            because no client was ever promised an exact number.
+          example: 10000
+
+    Employee:
+      type: object
+      required:
+        [id, employeeNumber, givenName, familyName, email, country, department, jobTitle, level, salary]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Assigned by the application, never by the database.
+        employeeNumber:
+          type: string
+          description: The company's own identifier for a person, distinct from `id`.
+          example: E00042
+        givenName: { type: string, example: Alice }
+        familyName: { type: string, example: Kapoor }
+        email: { type: string, format: email }
+        country:
+          type: string
+          description: ISO-3166 alpha-2 of the market this person is employed in.
+          example: IN
+        department: { type: string, example: Engineering }
+        jobTitle: { type: string, example: Software Engineer }
+        level:
+          $ref: '#/components/schemas/SeniorityLevel'
+        salary:
+          $ref: '#/components/schemas/Money'
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          description: |
+            A decimal **as a string**. Not a number: a JSON number is a double in a browser and a
+            salary is not a value to round. Clients that do arithmetic on it should parse it into
+            a decimal type, not a float.
+          pattern: '^-?\d+(\.\d+)?$'
+          example: "1200000.00"
+        currency:
+          type: string
+          description: ISO-4217. The employee's own currency; nothing is converted by this API.
+          minLength: 3
+          maxLength: 3
+          example: INR
+
+    SeniorityLevel:
+      type: string
+      enum: [JUNIOR, MID, SENIOR, LEAD, PRINCIPAL]
+
+    Problem:
+      type: object
+      description: RFC 7807.
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string, example: The request could not be understood }
+        status: { type: integer, example: 400 }
+        detail:
+          type: string
+          description: |
+            Never contains a salary figure. Domain messages name the employee and the currencies
+            involved and nothing else, because an error message is the most likely thing in the
+            system to end up in a log.
+          example: that is not a cursor this directory issued
+        instance: { type: string, format: uri }

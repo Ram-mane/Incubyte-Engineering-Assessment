@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { EmployeeListComponent } from './employee-list.component';
-import { EmployeePage } from './employee.model';
+import { DirectoryQuery, EmployeePage } from './employee.model';
 
 const page: EmployeePage = {
   items: [
@@ -20,18 +20,31 @@ const page: EmployeePage = {
       salary: { amount: '1200000.00', currency: 'INR' },
     },
   ],
-  page: 0,
-  size: 50,
-  total: 10000,
+  nextCursor: 'cursor-1',
+  totalApprox: 10000,
 };
 
 describe('EmployeeListComponent', () => {
   let fixture: ComponentFixture<EmployeeListComponent>;
   let element: HTMLElement;
+  let api: jasmine.SpyObj<EmployeeApiService>;
+  let asked: DirectoryQuery[];
 
   beforeEach(async () => {
-    const api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['page']);
-    api.page.and.returnValue(of(page));
+    asked = [];
+    api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['page', 'filterOptions']);
+    api.page.and.callFake((query: DirectoryQuery) => {
+      asked.push(query);
+      return of(page);
+    });
+    api.filterOptions.and.returnValue(
+      of({
+        countries: ['DE', 'IN'],
+        departments: ['Engineering', 'Finance'],
+        jobTitles: ['Accountant', 'Software Engineer'],
+        levels: ['JUNIOR', 'SENIOR'],
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [EmployeeListComponent],
@@ -65,13 +78,44 @@ describe('EmployeeListComponent', () => {
   it('says how much of the org is on screen', () => {
     const count = element.querySelector('[aria-live="polite"]');
 
-    expect(count?.textContent).toContain('1–50 of 10,000');
+    expect(count?.textContent).toContain('1–1 of 10,000');
   });
 
-  it('offers a pager the whole org can be walked with', () => {
-    const pager = element.querySelector('[aria-label="Select a page of employees"]');
+  it('offers next and previous rather than page numbers', () => {
+    const pager = element.querySelector('[aria-label="Directory pages"]');
+    const buttons = Array.from(pager?.querySelectorAll('button') ?? []).map((b) => b.textContent?.trim());
 
-    expect(pager).not.toBeNull();
-    expect(pager?.textContent).toContain('10000');
+    // Keyset paging has a page after this one, not a page seventeen. A numbered pager would be a
+    // promise the query cannot keep.
+    expect(buttons).toEqual(['Previous', 'Next']);
+  });
+
+  it('cannot go back from the first page', () => {
+    const previous = element.querySelector<HTMLButtonElement>('[aria-label="Directory pages"] button');
+
+    expect(previous?.disabled).toBeTrue();
+  });
+
+  it('offers the filters the directory actually contains', () => {
+    const labels = Array.from(element.querySelectorAll('mat-label')).map((l) => l.textContent?.trim());
+
+    expect(labels).toContain('Country');
+    expect(labels).toContain('Department');
+    expect(labels).toContain('Job title');
+    expect(labels).toContain('Level');
+    expect(labels).toContain('Search name or email');
+  });
+
+  it('sends the search term to the server rather than filtering in the browser', () => {
+    const search = element.querySelector<HTMLInputElement>('input[name="q"]');
+    search!.value = 'kapoor';
+    search!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    element.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    // Ten thousand people are never in the browser, so the filter cannot be applied there.
+    expect(asked[asked.length - 1].q).toBe('kapoor');
   });
 });

@@ -1,23 +1,39 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 
 import { MoneyPipe } from '../../shared/money.pipe';
-import { DEFAULT_PAGE_SIZE, EmployeeDirectoryFacade } from './employee-directory.facade';
+import { EmployeeDirectoryFacade } from './employee-directory.facade';
 
 /**
- * The directory: ten thousand people, fifty at a time.
+ * The directory: ten thousand people, fifty at a time, filtered and searched on the server.
  *
- * <p>The page is fetched from the server rather than filtered in the browser, so the table holds
- * one page whatever the size of the org. Filters, search and sorting are 2.6; what this proves is
- * the whole path - schema, query, port, endpoint, screen - with real data in it.
+ * <p>Next and previous rather than page numbers, because the pagination is keyset: there is a
+ * page after this one, not a page seventeen. A numbered pager would be a promise the query cannot
+ * keep.
  */
 @Component({
   selector: 'app-employee-list',
   standalone: true,
-  imports: [DecimalPipe, MatTableModule, MatPaginatorModule, MatProgressBarModule, MoneyPipe],
+  imports: [
+    DecimalPipe,
+    FormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatProgressBarModule,
+    MatSelectModule,
+    MatTableModule,
+    MoneyPipe,
+  ],
   providers: [EmployeeDirectoryFacade],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-list.component.html',
@@ -25,14 +41,35 @@ import { DEFAULT_PAGE_SIZE, EmployeeDirectoryFacade } from './employee-directory
 })
 export class EmployeeListComponent implements OnInit {
   protected readonly directory = inject(EmployeeDirectoryFacade);
-  protected readonly pageSizes = [25, DEFAULT_PAGE_SIZE, 100];
   protected readonly columns = ['employeeNumber', 'name', 'department', 'jobTitle', 'level', 'country', 'salary'];
 
+  protected readonly q = signal('');
+  protected readonly country = signal('');
+  protected readonly department = signal('');
+  protected readonly jobTitle = signal('');
+  protected readonly level = signal('');
+
   ngOnInit(): void {
-    this.directory.load(0, DEFAULT_PAGE_SIZE);
+    this.directory.loadFilterOptions();
+    this.directory.search({});
   }
 
-  protected onPage(event: PageEvent): void {
-    this.directory.load(event.pageIndex, event.pageSize);
+  protected apply(): void {
+    this.directory.search({
+      q: this.q(),
+      country: this.country(),
+      department: this.department(),
+      jobTitle: this.jobTitle(),
+      level: this.level(),
+    });
+  }
+
+  protected clear(): void {
+    this.q.set('');
+    this.country.set('');
+    this.department.set('');
+    this.jobTitle.set('');
+    this.level.set('');
+    this.apply();
   }
 }
