@@ -135,6 +135,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /employees/{id}:
+    get:
+      summary: One employee
+      operationId: employeeById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The employee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Employee' }
+        "404":
+          description: No employee with that id
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /employees/{id}/salary:
     put:
       summary: Change an employee's pay

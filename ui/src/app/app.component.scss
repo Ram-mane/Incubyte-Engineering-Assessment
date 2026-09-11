@@ -1,3 +1,13 @@
 .app-content {
   padding: 1.5rem;
 }
+
+.app-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+.app-toolbar__role {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-right: 0.5rem;
+}

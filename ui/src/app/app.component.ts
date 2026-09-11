@@ -1,13 +1,25 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
+
+import { SessionService } from './core/auth/session.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatToolbarModule],
+  standalone: true,
+  imports: [RouterOutlet, MatToolbarModule, MatButtonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
   protected readonly title = signal('Salary Management');
+  protected readonly session = inject(SessionService);
+  private readonly router = inject(Router);
+
+  protected signOut(): void {
+    this.session.end();
+    this.router.navigate(['/login']);
+  }
 }

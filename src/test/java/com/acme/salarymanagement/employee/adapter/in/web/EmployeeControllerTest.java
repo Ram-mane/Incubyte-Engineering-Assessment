@@ -22,6 +22,7 @@ import com.acme.salarymanagement.employee.application.port.in.DirectoryCursor;
 import com.acme.salarymanagement.employee.application.port.in.DirectoryFilterOptions;
 import com.acme.salarymanagement.employee.application.port.in.DirectoryRequest;
 import com.acme.salarymanagement.employee.application.port.in.EmployeePage;
+import com.acme.salarymanagement.employee.application.port.in.GetEmployee;
 import com.acme.salarymanagement.employee.application.port.in.ListEmployees;
 import com.acme.salarymanagement.employee.application.port.out.EmployeeSummary;
 import com.acme.salarymanagement.shared.CountryCode;
@@ -126,8 +127,31 @@ class EmployeeControllerTest {
         org.assertj.core.api.Assertions.assertThat(request.filters().level()).isEqualTo(SeniorityLevel.SENIOR);
     }
 
+    @Test
+    void one_employee_can_be_read_on_their_own() throws Exception {
+        mvc.perform(get("/api/v1/employees/{id}", "11111111-1111-1111-1111-111111111111"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.familyName").value("Kapoor"))
+                .andExpect(jsonPath("$.salary.amount").value("1200000.00"));
+    }
+
     @TestConfiguration
     static class OnePersonDirectory {
+
+        @Bean
+        GetEmployee getEmployee() {
+            return id -> new EmployeeSummary(
+                    UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                    "E00042",
+                    "Alice",
+                    "Kapoor",
+                    "alice.kapoor@acme.test",
+                    new CountryCode("IN"),
+                    new Department("Engineering"),
+                    new JobTitle("Software Engineer"),
+                    SeniorityLevel.SENIOR,
+                    Money.of(new BigDecimal("1200000.00"), new CurrencyCode("INR")));
+        }
 
         @Bean
         ListEmployees listEmployees() {

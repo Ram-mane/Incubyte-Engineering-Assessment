@@ -2,7 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { DirectoryFilterOptions, DirectoryQuery, EmployeePage } from '../../features/employees/employee.model';
+import {
+  ChangeSalaryRequest,
+  DirectoryFilterOptions,
+  DirectoryQuery,
+  Employee,
+  EmployeePage,
+  SalaryRevision,
+} from '../../features/employees/employee.model';
 
 /**
  * The only place the employee endpoints are named. Components reach the directory through the
@@ -26,5 +33,18 @@ export class EmployeeApiService {
 
   filterOptions(): Observable<DirectoryFilterOptions> {
     return this.http.get<DirectoryFilterOptions>('/api/v1/employees/filter-options');
+  }
+
+  byId(id: string): Observable<Employee> {
+    return this.http.get<Employee>(`/api/v1/employees/${id}`);
+  }
+
+  revisions(id: string): Observable<SalaryRevision[]> {
+    return this.http.get<SalaryRevision[]>(`/api/v1/employees/${id}/salary-revisions`);
+  }
+
+  /** The only way pay changes. Who made the change comes from the token, never from here. */
+  changeSalary(id: string, change: ChangeSalaryRequest): Observable<Employee> {
+    return this.http.put<Employee>(`/api/v1/employees/${id}/salary`, change);
   }
 }

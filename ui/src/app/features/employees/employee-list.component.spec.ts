@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { EmployeeApiService } from '../../core/api/employee-api.service';
@@ -48,7 +49,8 @@ describe('EmployeeListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [EmployeeListComponent],
-      providers: [{ provide: EmployeeApiService, useValue: api }],
+      // Rows link to the detail screen, so the component needs a router to render at all.
+      providers: [{ provide: EmployeeApiService, useValue: api }, provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EmployeeListComponent);

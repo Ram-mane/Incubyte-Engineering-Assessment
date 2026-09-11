@@ -1,0 +1,76 @@
+<section class="detail">
+  <a routerLink="/employees" class="detail__back">← Back to directory</a>
+
+  @if (detail.isLoading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading employee" />
+  }
+
+  @if (detail.hasFailed()) {
+    <p role="alert" class="detail__error">This employee could not be loaded.</p>
+  }
+
+  @if (detail.employee(); as employee) {
+    <header class="detail__header">
+      <div>
+        <h1>{{ employee.givenName }} {{ employee.familyName }}</h1>
+        <p class="detail__subtitle">
+          {{ employee.jobTitle }} · {{ employee.level }} · {{ employee.department }} ·
+          {{ employee.country }} · {{ employee.employeeNumber }}
+        </p>
+      </div>
+      <div class="detail__pay">
+        <span class="detail__pay-label">Current annual salary</span>
+        <span class="detail__pay-amount">{{ employee.salary | money }}</span>
+        @if (session.canChangePay()) {
+          <button mat-flat-button type="button" (click)="changePay()">Change pay</button>
+        } @else {
+          <span class="detail__readonly">Read-only: analysts cannot change pay</span>
+        }
+      </div>
+    </header>
+
+    @if (detail.changeError(); as problem) {
+      <p role="alert" class="detail__error">{{ problem }}</p>
+    }
+
+    <h2>Pay history</h2>
+
+    @if (detail.revisions().length === 0) {
+      <p class="detail__empty">No changes recorded yet. Any change made here will appear below.</p>
+    } @else {
+      <table mat-table [dataSource]="detail.revisions()" class="detail__table">
+        <ng-container matColumnDef="changedAt">
+          <th mat-header-cell *matHeaderCellDef scope="col">When</th>
+          <td mat-cell *matCellDef="let revision">{{ revision.changedAt | date: 'medium' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="previousAmount">
+          <th mat-header-cell *matHeaderCellDef scope="col" class="detail__figure">From</th>
+          <td mat-cell *matCellDef="let revision" class="detail__figure">
+            {{ revision.previousAmount | money }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="newAmount">
+          <th mat-header-cell *matHeaderCellDef scope="col" class="detail__figure">To</th>
+          <td mat-cell *matCellDef="let revision" class="detail__figure">
+            {{ revision.newAmount | money }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="reason">
+          <th mat-header-cell *matHeaderCellDef scope="col">Reason</th>
+          <td mat-cell *matCellDef="let revision">{{ revision.reason }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="note">
+          <th mat-header-cell *matHeaderCellDef scope="col">Note</th>
+          <td mat-cell *matCellDef="let revision">{{ revision.note }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+  }
+</section>

@@ -44,3 +44,19 @@ export interface DirectoryQuery {
   readonly cursor?: string;
   readonly limit?: number;
 }
+
+export interface SalaryRevision {
+  readonly previousAmount: Money;
+  readonly newAmount: Money;
+  readonly reason: string;
+  readonly changedBy: string;
+  readonly changedAt: string;
+  readonly note?: string;
+}
+
+export interface ChangeSalaryRequest {
+  readonly amount: string;
+  readonly currency: string;
+  readonly reason: string;
+  readonly note?: string;
+}

@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
+import { RouterLink } from '@angular/router';
 
 import { MoneyPipe } from '../../shared/money.pipe';
 import { EmployeeDirectoryFacade } from './employee-directory.facade';
@@ -33,6 +34,7 @@ import { EmployeeDirectoryFacade } from './employee-directory.facade';
     MatSelectModule,
     MatTableModule,
     MoneyPipe,
+    RouterLink,
   ],
   providers: [EmployeeDirectoryFacade],
   changeDetection: ChangeDetectionStrategy.OnPush,

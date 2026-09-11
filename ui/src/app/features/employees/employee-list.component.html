@@ -76,7 +76,9 @@
   <table mat-table [dataSource]="directory.employees()" class="directory__table">
     <ng-container matColumnDef="employeeNumber">
       <th mat-header-cell *matHeaderCellDef scope="col">Number</th>
-      <td mat-cell *matCellDef="let employee">{{ employee.employeeNumber }}</td>
+      <td mat-cell *matCellDef="let employee">
+        <a [routerLink]="['/employees', employee.id]">{{ employee.employeeNumber }}</a>
+      </td>
     </ng-container>
 
     <ng-container matColumnDef="name">

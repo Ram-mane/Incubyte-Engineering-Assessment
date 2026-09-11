@@ -1,0 +1,38 @@
+<section class="login">
+  <mat-card class="login__card">
+    <h1>Sign in</h1>
+
+    @if (expired()) {
+      <p role="status" class="login__notice">Your session expired. Please sign in again.</p>
+    }
+
+    <form (ngSubmit)="submit()">
+      <mat-form-field appearance="outline" class="login__field">
+        <mat-label>Email</mat-label>
+        <input matInput name="email" type="email" autocomplete="username"
+               [ngModel]="email()" (ngModelChange)="email.set($event)" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="login__field">
+        <mat-label>Password</mat-label>
+        <input matInput name="password" type="password" autocomplete="current-password"
+               [ngModel]="password()" (ngModelChange)="password.set($event)" />
+      </mat-form-field>
+
+      @if (failed()) {
+        <p role="alert" class="login__error">Those credentials do not match a user.</p>
+      }
+
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Signing in" />
+      }
+
+      <button mat-flat-button type="submit" [disabled]="busy()">Sign in</button>
+    </form>
+
+    <p class="login__demo">
+      Demo accounts: <code>hr.manager&#64;acme.example</code> changes pay,
+      <code>hr.analyst&#64;acme.example</code> reads only. Password <code>demo-password</code>.
+    </p>
+  </mat-card>
+</section>
