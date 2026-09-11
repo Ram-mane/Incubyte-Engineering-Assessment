@@ -6,10 +6,13 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
 
 /**
  * The rules from docs/03-ARCHITECTURE.md section 4, made executable.
@@ -81,6 +84,22 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .haveSimpleNameEndingWith("WriteRepository")
             .because("the dashboard reports on pay; it must have no way of changing it");
+
+    // Rule 4 of docs/03-ARCHITECTURE.md, which was documented but unenforced until a band needed
+    // JobTitle: the allowlist rule above permits any ..domain.. to depend on any other ..domain..,
+    // so one module reaching into another's internals passed silently. A type two modules both
+    // need belongs in shared; anything else they need from each other goes through a port.
+    @ArchTest
+    static final ArchRule modules_do_not_reach_into_each_others_internals = SlicesRuleDefinition.slices()
+            .matching("com.acme.salarymanagement.(*)..")
+            .namingSlices("module $1")
+            .should()
+            .notDependOnEachOther()
+            .ignoreDependency(
+                    DescribedPredicate.alwaysTrue(),
+                    JavaClass.Predicates.resideInAnyPackage("com.acme.salarymanagement.shared..", "java..", "javax.."))
+            .because("a module's domain and persistence are its own; what two modules share belongs "
+                    + "in the kernel, and what one needs from another goes through its inbound port");
 
     @ArchTest
     static final ArchRule modules_are_free_of_cycles = slices().matching("com.acme.salarymanagement.(*)..")
