@@ -31,13 +31,19 @@ CREATE TABLE salary_revision (
     -- Optional, unlike the reason. The domain stores a blank note as no note (D081).
     note            varchar     NULL,
 
-    -- Each mirrors an invariant the domain already enforces, and no more: the ChangeReason enum
-    -- as varchar + CHECK (D078), I1 on both amounts, and I6 - a change to the same amount is a
-    -- no-op the aggregate refuses, so a row recording one could only have come from a code path
-    -- that went around it.
+    -- Each mirrors an invariant the domain already enforces, and no more. The ChangeReason enum
+    -- as varchar + CHECK (D078), with a test asserting this list and the enum are the same set so
+    -- drift fails the build rather than an insert. I1 on the new amount, which changeSalaryTo
+    -- refuses when it is not positive. And I6: a change to the same amount is a no-op the
+    -- aggregate refuses, so a row recording one could only come from a path that went around it.
+    --
+    -- Deliberately not constrained: previous_amount > 0. Nothing in the domain enforces it -
+    -- Money holds zero and negative amounts by design, and Employee's constructor checks only
+    -- currency - so a CHECK here would be a database-only rule the domain would eventually
+    -- violate (D096).
     CONSTRAINT salary_revision_reason_is_known
         CHECK (change_reason IN ('MERIT', 'PROMOTION', 'MARKET_ADJUSTMENT', 'CORRECTION')),
-    CONSTRAINT salary_revision_amounts_are_positive CHECK (previous_amount > 0 AND new_amount > 0),
+    CONSTRAINT salary_revision_new_amount_is_positive CHECK (new_amount > 0),
     CONSTRAINT salary_revision_is_a_change CHECK (new_amount <> previous_amount)
 );
 
@@ -72,3 +78,4 @@ GRANT SELECT, INSERT ON app_user TO salary_app;
 -- the application at all - not by a bug, not by a repository method nobody reviewed, not by a
 -- console session using the application's credentials.
 GRANT SELECT, INSERT ON salary_revision TO salary_app;
+

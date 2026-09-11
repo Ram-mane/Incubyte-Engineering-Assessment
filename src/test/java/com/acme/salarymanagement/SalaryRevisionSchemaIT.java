@@ -7,11 +7,16 @@ import static com.acme.salarymanagement.support.SchemaCatalogue.primaryKeyOf;
 import static com.acme.salarymanagement.support.SchemaCatalogue.privilegesOn;
 import static com.acme.salarymanagement.support.SchemaCatalogue.triggersOn;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.acme.salarymanagement.employee.domain.ChangeReason;
 import com.acme.salarymanagement.support.PostgresIntegrationTest;
 
 /**
@@ -125,9 +131,30 @@ class SalaryRevisionSchemaIT extends PostgresIntegrationTest {
         var actor = anHrManager(jdbc);
 
         assertThatThrownBy(() -> insertRevision(jdbc, employee, actor, "1200000.0000", "0.0000", "CORRECTION"))
-                .as("I1 holds on the log as well as on the employee")
+                .as("I1 holds on the log as well as on the employee: changeSalaryTo refuses it too")
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("salary_revision_amounts_are_positive");
+                .hasMessageContaining("salary_revision_new_amount_is_positive");
+    }
+
+    @Test
+    void a_revision_from_an_amount_nobody_could_be_paid_is_allowed(@Autowired JdbcTemplate jdbc) {
+        var employee = anEmployee(jdbc);
+        var actor = anHrManager(jdbc);
+
+        // Deliberately no CHECK on previous_amount. Money holds zero and negative amounts by
+        // design and Employee's constructor does not require a positive salary, so the domain can
+        // legitimately produce this row - and a database-only rule would reject it at 2.10 (D096).
+        assertThatCode(() -> insertRevision(jdbc, employee, actor, "0.0000", "1200000.0000", "CORRECTION"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void the_reason_check_allows_exactly_the_reasons_the_domain_has(@Autowired JdbcTemplate jdbc) {
+        assertThat(allowedReasonsIn(jdbc))
+                .as("the enum and the CHECK are the same set written twice; drift fails here rather"
+                        + " than at insert time, for a reason the domain considers perfectly valid")
+                .containsExactlyInAnyOrderElementsOf(
+                        Stream.of(ChangeReason.values()).map(Enum::name).toList());
     }
 
     @Test
@@ -149,6 +176,26 @@ class SalaryRevisionSchemaIT extends PostgresIntegrationTest {
         assertThat(privilegesOn(jdbc, APPLICATION_ROLE, "employee"))
                 .as("pay changes in place; only the log is frozen")
                 .containsExactlyInAnyOrder("SELECT", "INSERT", "UPDATE");
+    }
+
+    /** The values the CHECK actually permits, read out of the constraint rather than restated. */
+    private static Set<String> allowedReasonsIn(JdbcTemplate jdbc) {
+        String definition = jdbc.queryForObject(
+                """
+                SELECT pg_get_constraintdef(oid)
+                FROM   pg_constraint
+                WHERE  conrelid = to_regclass(?) AND conname = ?
+                """,
+                String.class,
+                "salary_revision",
+                "salary_revision_reason_is_known");
+
+        var reasons = new LinkedHashSet<String>();
+        var literals = Pattern.compile("'([A-Z_]+)'").matcher(definition);
+        while (literals.find()) {
+            reasons.add(literals.group(1));
+        }
+        return reasons;
     }
 
     private static UUID anEmployee(JdbcTemplate jdbc) {
