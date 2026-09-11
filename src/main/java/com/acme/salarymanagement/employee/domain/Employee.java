@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 import com.acme.salarymanagement.shared.CountryCode;
+import com.acme.salarymanagement.shared.Department;
 import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
 import com.acme.salarymanagement.shared.SeniorityLevel;
@@ -27,7 +28,7 @@ public class Employee {
     private final PersonName name;
     private final EmailAddress email;
     private final CountryCode country;
-    private final DepartmentId department;
+    private final Department department;
     private final JobTitle jobTitle;
     private final SeniorityLevel level;
     private final LocalDate hireDate;
@@ -40,7 +41,7 @@ public class Employee {
             PersonName name,
             EmailAddress email,
             CountryCode country,
-            DepartmentId department,
+            Department department,
             JobTitle jobTitle,
             SeniorityLevel level,
             LocalDate hireDate,
@@ -135,7 +136,7 @@ public class Employee {
         return country;
     }
 
-    public DepartmentId department() {
+    public Department department() {
         return department;
     }
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
+import com.acme.salarymanagement.shared.Department;
 import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
 import com.acme.salarymanagement.shared.SeniorityLevel;
@@ -120,7 +121,7 @@ class EmployeeTest {
     void an_employee_carries_the_dimensions_the_dashboard_filters_on() {
         var alice = anEmployee().inEngineering().asSeniorEngineer().build();
 
-        assertThat(alice.department()).isEqualTo(new DepartmentId(3L));
+        assertThat(alice.department()).isEqualTo(new Department("Engineering"));
         assertThat(alice.jobTitle()).isEqualTo(new JobTitle("Software Engineer"));
         assertThat(alice.level()).isEqualTo(SeniorityLevel.SENIOR);
     }

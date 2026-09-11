@@ -10,38 +10,38 @@ pagination, indexing, efficient filtered search and JPA query performance demons
 ```mermaid
 erDiagram
     EMPLOYEE ||--o{ SALARY_REVISION : "audit log"
-    EMPLOYEE }o--|| DEPARTMENT : "belongs to"
-    EMPLOYEE }o--o| EMPLOYEE : "reports to"
     SALARY_BAND ||--o{ EMPLOYEE : "governs (title+level+country)"
     SALARY_REVISION }o--|| APP_USER : "changed by"
 
     EMPLOYEE {
-        bigint id PK
+        uuid id PK
         varchar employee_number UK
-        varchar first_name
-        varchar last_name
+        varchar given_name
+        varchar family_name
         varchar email UK
-        bigint department_id FK
+        char country_code
+        varchar department
         varchar job_title
         varchar seniority_level
-        char country_code
-        varchar employment_type
         date hire_date
-        date termination_date
-        bigint manager_id FK
         varchar status
         numeric salary_amount
         char salary_currency
-        int version
+    }
+    APP_USER {
+        uuid id PK
+        varchar email UK
+        varchar password_hash
+        varchar role
     }
     SALARY_REVISION {
         bigint id PK
-        bigint employee_id FK
+        uuid employee_id FK
         numeric previous_amount
         numeric new_amount
         char currency_code
         varchar change_reason
-        bigint changed_by FK
+        uuid changed_by FK
         timestamptz changed_at
         text note
     }
@@ -63,13 +63,25 @@ erDiagram
     }
 ```
 
-Salary lives on `employee` as `numeric(15,2)` + `char(3)`, mapped to the `Money` value object as a
-JPA `@Embeddable`. `salary_revision` is insert-only: no update path exists in the repository, and
-the application user has no `UPDATE`/`DELETE` grant on it.
+Salary lives on `employee` as `numeric(19,4)` + `char(3)`, mapped to the `Money` value object as a
+JPA `@Embeddable`. Scale 4 rather than 2 because the column holds six currencies and `Money`'s
+scale is per currency; the domain still rounds each amount to its own currency's scale.
+`salary_revision` is insert-only: no update path exists in the repository, and the application user
+has no `UPDATE`/`DELETE` grant on it.
+
+Identity is minted by the application, never by the database: `employee.id` and `app_user.id` are
+UUIDs assigned at construction, and no column in the schema has a `DEFAULT` — not
+`gen_random_uuid()`, not `now()` (D091). `department` is a name on the row rather than a foreign
+key to a lookup table, for the same reason `job_title` is: it is a dimension the dashboard groups
+by, and an id would put a join in front of every query that reads it (D092).
+
+The employee table deliberately has no `manager_id`, `employment_type`, `termination_date` or
+`version` column. Each was drawn in an earlier version of this diagram, none is on the aggregate,
+and a column no code writes has its meaning decided later by whoever guesses.
 
 ## 2. Why `numeric`, and why the currency travels with it
 
-`numeric(15,2)`, never `float8`. Exact decimal arithmetic is not optional for pay data, and
+`numeric(19,4)`, never `float8`. Exact decimal arithmetic is not optional for pay data, and
 PostgreSQL sums `numeric` exactly.
 
 The currency column sits immediately beside every amount column — on the employee, on the revision,
@@ -84,20 +96,20 @@ level and status, free-text searched by name, sorted, and paged.
 ```sql
 -- Directory filtering. Covering, so the common page is an index-only scan.
 CREATE INDEX ix_employee_filter
-  ON employee (status, department_id, country_code, seniority_level)
-  INCLUDE (last_name, first_name, job_title, salary_amount, salary_currency);
+  ON employee (status, department, country_code, seniority_level)
+  INCLUDE (family_name, given_name, job_title, salary_amount, salary_currency);
 
 -- Keyset pagination: the sort key must be a total order.
-CREATE INDEX ix_employee_keyset ON employee (last_name, id);
+CREATE INDEX ix_employee_keyset ON employee (family_name, id);
 
 -- Free-text name/email search without a leading-wildcard seq scan.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX ix_employee_search_trgm
-  ON employee USING gin ((first_name || ' ' || last_name || ' ' || email) gin_trgm_ops);
+  ON employee USING gin ((given_name || ' ' || family_name || ' ' || email) gin_trgm_ops);
 
 -- Aggregations for the dashboard, grouped and filtered on the same columns.
 CREATE INDEX ix_employee_rollup
-  ON employee (department_id, country_code, seniority_level)
+  ON employee (department, country_code, seniority_level)
   INCLUDE (salary_amount, salary_currency) WHERE status = 'ACTIVE';
 
 -- Employee's own audit log, newest first.
@@ -119,15 +131,15 @@ exactly why it is the kind of thing that ships and then falls over at 500,000.
 **Filtered, searched, keyset-paged directory** — one query, no N+1, no `COUNT(*)`:
 
 ```sql
-SELECT e.id, e.employee_number, e.first_name, e.last_name, e.job_title,
+SELECT e.id, e.employee_number, e.given_name, e.family_name, e.job_title,
        e.seniority_level, e.country_code, e.salary_amount, e.salary_currency
 FROM   employee e
 WHERE  e.status = 'ACTIVE'
-  AND (e.department_id = :dept          OR :dept IS NULL)
+  AND (e.department     = :dept          OR :dept IS NULL)
   AND (e.country_code  = :country       OR :country IS NULL)
-  AND (:q IS NULL OR (e.first_name||' '||e.last_name||' '||e.email) ILIKE '%'||:q||'%')
-  AND (e.last_name, e.id) > (:lastName, :lastId)
-ORDER BY e.last_name, e.id
+  AND (:q IS NULL OR (e.given_name||' '||e.family_name||' '||e.email) ILIKE '%'||:q||'%')
+  AND (e.family_name, e.id) > (:lastName, :lastId)
+ORDER BY e.family_name, e.id
 LIMIT  50;
 ```
 
@@ -143,7 +155,7 @@ WITH normalised AS (
         AND fx.to_currency   = :base
         AND fx.as_of         = :rateDate
   WHERE  e.status = 'ACTIVE'
-    AND (e.department_id = :dept OR :dept IS NULL)
+    AND (e.department = :dept OR :dept IS NULL)
 )
 SELECT count(*)                                            AS headcount,
        sum(usd_amount)                                     AS total_spend,

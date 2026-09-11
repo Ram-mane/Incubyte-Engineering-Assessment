@@ -42,7 +42,7 @@ classDiagram
         EmployeeNumber employeeNumber
         PersonName name
         EmailAddress email
-        DepartmentId department
+        Department department
         JobTitle jobTitle
         SeniorityLevel level
         CountryCode country

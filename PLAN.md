@@ -64,10 +64,10 @@ raising quality rather than adding features.
 
 | # | Task | Commit |
 |---|---|---|
-| 2.1 | Flyway V1: department, app_user, employee (with embedded salary) | `feat: add employee schema` |
-| 2.2 | Flyway V2: `salary_revision`, insert-only grants | `feat: add append-only salary revision log` |
+| 2.1 | Flyway V2: app_user, employee (with embedded salary and department) | `feat: add employee schema` |
+| 2.2 | Flyway V3: `salary_revision`, insert-only grants | `feat: add append-only salary revision log` |
 | 2.3 | Test asserting the DB rejects `UPDATE`/`DELETE` on revisions | `test: verify salary revisions are append-only at the database` |
-| 2.4 | Flyway V3: indexes — filter, keyset, trigram, rollup | `perf: add directory and dashboard indexes` |
+| 2.4 | Flyway V4: indexes — filter, keyset, trigram, rollup | `perf: add directory and dashboard indexes` |
 | 2.5 | Persistence adapters + ports | `feat: add persistence adapters for employee and revisions` |
 | 2.6 | `OnboardEmployee`, `SearchEmployees` with keyset pagination + trigram search | `feat: add employee directory with keyset pagination and search` |
 | 2.7 | `ChangeSalary`, `GetSalaryRevisions` | `feat: add salary change and revision log use cases` |
@@ -79,6 +79,10 @@ raising quality rather than adding features.
 | 2.13 | Angular: change-salary dialog | `feat: add salary change dialog` |
 | 2.14 | Redeploy; verify live end to end | `ci: deploy day two build` |
 | 2.15 | **Set `failOnEmptyShould=true`** now that all five module packages exist | `test: fail architecture rules that match no classes` |
+
+> Migration numbers run one ahead of what the task list originally said: `V1` is
+> `enable_required_extensions`, applied on Day 1. Renaming it would fail Flyway validation on
+> every environment that has already run it, so the numbers moved instead (D090).
 
 > 2.15 closes a hole opened on Day 1. Until the module packages exist, an ArchUnit rule that
 > matches no classes has to pass, or the build fails on empty rules from the first commit. Once

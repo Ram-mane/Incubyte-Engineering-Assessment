@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
+import com.acme.salarymanagement.shared.Department;
 import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
 import com.acme.salarymanagement.shared.SeniorityLevel;
@@ -23,7 +24,7 @@ final class EmployeeMother {
     private EmailAddress email = new EmailAddress("alice.kapoor@acme.test");
     private CountryCode country = new CountryCode("IN");
     private LocalDate hireDate = LocalDate.of(2019, 4, 1);
-    private DepartmentId department = new DepartmentId(3L);
+    private Department department = new Department("Engineering");
     private JobTitle jobTitle = new JobTitle("Software Engineer");
     private SeniorityLevel level = SeniorityLevel.SENIOR;
     private EmploymentStatus status = EmploymentStatus.ACTIVE;
@@ -88,7 +89,7 @@ final class EmployeeMother {
     }
 
     EmployeeMother inEngineering() {
-        this.department = new DepartmentId(3L);
+        this.department = new Department("Engineering");
         return this;
     }
 
