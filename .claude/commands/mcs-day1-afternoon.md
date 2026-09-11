@@ -8,7 +8,10 @@ This is the only genuinely interesting code in the submission and the part the i
 on. Follow the `tdd-cycle` skill strictly: **write the tests first, show them to me, wait for my
 approval, then implement.** Never both in one step.
 
-Zero Spring, zero JPA, zero Jackson in these classes. Whole suite must run in under two seconds.
+Zero Spring, zero JPA, zero Jackson in these classes. The **pure domain tests** run in under
+two seconds; the whole-suite budget is 90 seconds (`07-TEST-STRATEGY.md` §1), which includes
+ArchUnit's class scan and the jqwik properties. Do not move either behind a profile to make a
+number look better — a gate that can be skipped is not a gate.
 
 **1.7 `Money`** — **done**, commits `fc3074a` and `9c3e0f4`. Record of `BigDecimal amount` +
 `CurrencyCode currency`; same-currency arithmetic; cross-currency `plus`/`minus` throws

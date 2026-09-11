@@ -37,8 +37,12 @@ sufficient (see `docs/adr/0002-current-salary-with-audit-log.md`). Do not reintr
 
 - **No `double` or `float` anywhere money is involved.** `Money` (BigDecimal + CurrencyCode) only.
   Adding different currencies throws.
-- **No `LocalDate.now()` / `Instant.now()` in domain or application code.** Inject `Clock`. This is
-  what makes temporal behaviour testable.
+- **No ambient time in domain or application code.** The goal is that a domain method's result is a
+  pure function of its arguments — so no `LocalDate.now()`, no `Instant.now()`, and no `Clock`
+  consulted inside an aggregate either. A `Clock` parameter is still a time source: the method would
+  return something different depending on when it ran. **Time enters as a value**: `changeSalaryTo`
+  takes the `Instant` to record. The application layer resolves its injected `Clock` to an `Instant`
+  at the boundary, which is the one place a clock belongs.
 - **Salaries are stored in the employee's local currency.** Aggregates are normalised to the
   reporting currency through the seeded FX table, explicitly, at query time. There is no implicit
   conversion and no "default currency" anywhere.

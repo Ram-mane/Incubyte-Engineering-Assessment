@@ -66,6 +66,11 @@ public record Money(BigDecimal amount, CurrencyCode currency) {
         return new Money(amount.multiply(rate.rate()), target);
     }
 
+    /** Whether this is an amount someone could be paid. Invariant I1 asks only this much. */
+    public boolean isPositive() {
+        return amount.signum() > 0;
+    }
+
     private void requireSameCurrencyAs(Money other) {
         if (!currency.equals(other.currency)) {
             throw new CurrencyMismatchException("cannot combine %s with %s without an explicit exchange rate"

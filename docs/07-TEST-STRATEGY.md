@@ -120,6 +120,13 @@ That last one is verified by hand instead, and re-run whenever the policy change
 |---|---|
 | `HALF_EVEN` → `HALF_UP` | `MoneyTest$Rounding` fails 3 of 4 — `a_half_cent_rounds_down_when_the_preceding_digit_is_even` first |
 | `currency.scale()` → `currency.scale() + 1` | `MoneyTest$Scale`, `$Equality` and `$Conversion` all fail |
+| `Employee.equals` → always `true` | `two_employees_with_different_identities_are_different_employees` fails |
+| `Employee.equals` → always `false` | `two_employees_with_the_same_identity_are_the_same_employee` fails |
+
+The last two exist because `equals`, `hashCode` and `toString` are excluded from mutation by name
+(D074) — Pitest cannot scope an exclusion to generated methods, so the one hand-written `equals` in
+the domain is excluded with them. Identity equality decides whether an aggregate is the same
+aggregate after a change, so it is verified by hand rather than left uncovered.
 
 An automated number covering part of the code, plus a recorded manual probe covering the rest, is
 honest. An automated number quoted as if it covered everything is not.

@@ -42,7 +42,7 @@ classDiagram
         EmployeeNumber employeeNumber
         PersonName name
         EmailAddress email
-        Department department
+        DepartmentId department
         JobTitle jobTitle
         SeniorityLevel level
         CountryCode country
@@ -51,12 +51,11 @@ classDiagram
         EmployeeId managerId
         EmploymentStatus status
         Money currentSalary
-        changeSalaryTo(Money, ChangeReason, UserId) SalaryRevision
+        changeSalaryTo(Money, ChangeReason, UserId, String, Instant) SalaryRevision
     }
 
     class SalaryRevision {
         <<Entity, append-only>>
-        RevisionId id
         EmployeeId employeeId
         Money previousAmount
         Money newAmount

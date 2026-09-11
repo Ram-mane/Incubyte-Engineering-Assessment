@@ -265,6 +265,36 @@ class MoneyTest {
     }
 
     @Nested
+    class Sign {
+
+        // The narrowest comparison invariant I1 needs, and no more (D034). Tested here rather than
+        // only through Employee, because it is a public method on a shared value object and the
+        // next caller inherits whatever contract these tests pin down.
+
+        @Test
+        void an_amount_above_zero_is_positive() {
+            assertThat(Money.of("0.01", USD).isPositive()).isTrue();
+        }
+
+        @Test
+        void zero_is_not_positive() {
+            assertThat(Money.of("0.00", USD).isPositive()).isFalse();
+        }
+
+        @Test
+        void a_negative_amount_is_not_positive() {
+            assertThat(Money.of("-0.01", USD).isPositive()).isFalse();
+        }
+
+        @Test
+        void an_amount_that_rounds_to_zero_is_not_positive() {
+            // 0.004 USD normalises to 0.00 at construction, so it is not a payable amount even
+            // though the number handed in was above zero.
+            assertThat(Money.of("0.004", USD).isPositive()).isFalse();
+        }
+    }
+
+    @Nested
     class Equality {
 
         @Test

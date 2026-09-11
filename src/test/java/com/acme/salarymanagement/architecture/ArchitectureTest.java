@@ -3,6 +3,7 @@ package com.acme.salarymanagement.architecture;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -86,6 +87,20 @@ class ArchitectureTest {
             .should()
             .beFreeOfCycles()
             .because("a cycle between modules means they are one module that has not admitted it");
+
+    // Structural, not a property of one field: pay changes through changeSalaryTo, which returns
+    // the revision recording it. A setter anywhere in the domain is a way to move state without
+    // producing the evidence, so the rule is written for every domain class rather than for
+    // Employee.currentSalary alone.
+    @ArchTest
+    static final ArchRule the_domain_has_no_setters = noMethods()
+            .that()
+            .areDeclaredInClassesThat()
+            .resideInAPackage("..domain..")
+            .should()
+            .haveNameMatching("set[A-Z].*")
+            .because("a setter is a way to change state without producing the record of the change; "
+                    + "pay moves through changeSalaryTo, which returns the SalaryRevision that proves it");
 
     @ArchTest
     static final ArchRule dependencies_are_injected_through_constructors = fields().should()

@@ -1,5 +1,6 @@
 package com.acme.salarymanagement.employee.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -70,6 +71,46 @@ public class Employee {
                             country.currency().code(),
                             salary.currency().code()));
         }
+    }
+
+    /**
+     * The only way a salary changes. Mutates the current value <em>and</em> returns the revision
+     * recording it, so there is no code path that moves pay without producing the evidence.
+     *
+     * <p>Takes the instant to record rather than a clock: the aggregate never consults time, so the
+     * same arguments always produce the same revision. The application layer resolves its injected
+     * {@code Clock} at the boundary.
+     *
+     * <p>Every rejection happens before any assignment. An aggregate that mutates and then throws
+     * leaves the caller holding a changed employee and no revision to account for it.
+     *
+     * @param note free text explaining the change; optional, unlike the reason
+     * @return the revision to persist in the same transaction as the employee
+     */
+    public SalaryRevision changeSalaryTo(
+            Money newSalary, ChangeReason reason, UserId actor, String note, Instant changedAt) {
+        Objects.requireNonNull(newSalary, "a new salary is required");
+        Objects.requireNonNull(reason, "a change reason is required: an unexplained change is not an audit record");
+        Objects.requireNonNull(actor, "the user making the change is required");
+        Objects.requireNonNull(changedAt, "the instant of the change is required");
+
+        if (status == EmploymentStatus.TERMINATED) {
+            throw new IllegalStateException(
+                    "employee %s is TERMINATED; pay cannot change".formatted(employeeNumber.value()));
+        }
+        requireSalaryMatchesCountry(newSalary, country);
+        if (!newSalary.isPositive()) {
+            throw new IllegalArgumentException("a salary must be greater than zero");
+        }
+        if (newSalary.equals(currentSalary)) {
+            throw new IllegalArgumentException(
+                    "employee %s is already paid that amount".formatted(employeeNumber.value()));
+        }
+
+        String recordedNote = (note == null || note.isBlank()) ? null : note.trim();
+        Money previousAmount = currentSalary;
+        currentSalary = newSalary;
+        return new SalaryRevision(id, previousAmount, newSalary, reason, actor, changedAt, recordedNote);
     }
 
     public EmployeeId id() {
