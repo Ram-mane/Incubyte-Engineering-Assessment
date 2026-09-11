@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
+import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
+import com.acme.salarymanagement.shared.SeniorityLevel;
 
 /**
  * The aggregate root. What it refuses to be built as matters as much as what it holds: an employee

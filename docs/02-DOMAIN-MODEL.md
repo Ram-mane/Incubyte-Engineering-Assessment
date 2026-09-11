@@ -67,7 +67,6 @@ classDiagram
 
     class SalaryBand {
         <<Aggregate Root>>
-        BandId id
         JobTitle jobTitle
         SeniorityLevel level
         CountryCode country
@@ -143,7 +142,7 @@ called with the arguments swapped.
 | I7 | Change reason is mandatory. | `SalaryRevision` |
 | I8 | A terminated employee's salary cannot be changed. | `ChangeSalaryUseCase` |
 | I9 | An employee's salary currency must match their country's currency. | `Employee` |
-| I10 | A band's `min ≤ mid ≤ max`, all one currency. | `SalaryBand` |
+| I10 | A band's `0 < min ≤ mid ≤ max`, all one currency. | `SalaryBand` |
 
 ## 5. Ubiquitous language
 

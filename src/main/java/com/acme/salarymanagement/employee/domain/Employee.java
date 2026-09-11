@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 import com.acme.salarymanagement.shared.CountryCode;
+import com.acme.salarymanagement.shared.JobTitle;
 import com.acme.salarymanagement.shared.Money;
+import com.acme.salarymanagement.shared.SeniorityLevel;
 
 /**
  * The aggregate root.

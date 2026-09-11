@@ -1,4 +1,4 @@
-package com.acme.salarymanagement.employee.domain;
+package com.acme.salarymanagement.shared;
 
 import java.util.Objects;
 

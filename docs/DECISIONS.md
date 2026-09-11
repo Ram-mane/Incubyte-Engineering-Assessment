@@ -101,6 +101,16 @@ so reading a section shows what governs one part of the system.
 | D081 | `note` is trimmed and a blank note recorded as no note | Consistent with `EmployeeNumber` and `JobTitle`, which already trim. `"   "` stored as whitespace is a value that reads as present and means absent | Active |
 | D041 | I8 enforced on `status == TERMINATED`, not `terminationDate` arithmetic | Date arithmetic drags a `Clock` into the check and raises a future-dated-termination question nothing in scope needs answered | Active |
 
+## Domain — Bands
+
+| ID | Decision | Why | Status |
+|---|---|---|---|
+| D082 | `JobTitle` and `SeniorityLevel` moved from `employee/domain` to `shared` | `SalaryBand` needs both, and a module reaching into another module's domain breaks architecture rule 4. **Guard: a type moves to `shared` only when two or more modules genuinely consume it** — employee, band and analytics all group by these two. Without that test the kernel becomes the place everything goes | Active |
+| D083 | `SalaryBand` carries no `BandId` | Same principle as D079: found by the natural key of role, level and country, which `05-DATA-MODEL.md` already makes unique, and referenced by nothing. `BIGSERIAL` PK in the table, absent from the domain. The class diagram is corrected, as it was for `DepartmentId` (D071) | Active |
+| D084 | Compa-ratio is held to 4 decimal places, `HALF_EVEN` | `1234567 / 1250000` recurs and must round somewhere: precise enough to sort a directory by, not so precise it implies accuracy the inputs lack | Active |
+| D085 | All three band bounds must be greater than zero, not only the midpoint | Rejecting only the divisor would be a rule shaped by the implementation. A band with a zero minimum describes no range anyone could be paid within, so I10 now reads `0 < min ≤ mid ≤ max` | Active |
+| D086 | Bounds are checked before the compa-ratio when classifying | Outside the range is a different statement from far from the midpoint: an employee under the minimum is `BELOW_MIN` whatever their ratio, and a band whose min sits below 0.9 of mid would otherwise report `LOW` for someone genuinely out of range | Active |
+
 ## Quality gates
 
 | ID | Decision | Why | Status |
