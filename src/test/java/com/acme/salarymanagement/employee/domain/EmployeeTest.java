@@ -92,6 +92,22 @@ class EmployeeTest {
     // complete.
 
     @Test
+    void an_employee_cannot_be_created_with_a_salary_of_zero() {
+        // I1 holds at construction, not only on change: an aggregate that can be built in a state
+        // the database refuses to store is looser than the system that ships.
+        assertThatThrownBy(() -> anEmployee().inIndia().earning("0.00").build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("greater than zero");
+    }
+
+    @Test
+    void an_employee_cannot_be_created_with_a_negative_salary() {
+        assertThatThrownBy(() -> anEmployee().inIndia().earning("-1.00").build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("greater than zero");
+    }
+
+    @Test
     void an_employee_without_a_department_is_rejected() {
         assertThatThrownBy(() -> anEmployee().inNoDepartment().build()).isInstanceOf(NullPointerException.class);
     }

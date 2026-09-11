@@ -59,6 +59,7 @@ public class Employee {
         this.status = Objects.requireNonNull(status, "an employment status is required");
         this.currentSalary = Objects.requireNonNull(currentSalary, "a salary is required");
         requireSalaryMatchesCountry(currentSalary, country);
+        requirePositive(currentSalary);
     }
 
     /**
@@ -73,6 +74,17 @@ public class Employee {
                             country.code(),
                             country.currency().code(),
                             salary.currency().code()));
+        }
+    }
+
+    /**
+     * Invariant I1, enforced wherever a salary enters the aggregate rather than only where it
+     * changes. An employee constructed with a zero salary is an employee the database refuses to
+     * store, and every test that built one was testing a looser object than the one that ships.
+     */
+    private static void requirePositive(Money salary) {
+        if (!salary.isPositive()) {
+            throw new IllegalArgumentException("a salary must be greater than zero");
         }
     }
 
@@ -102,9 +114,7 @@ public class Employee {
                     "employee %s is TERMINATED; pay cannot change".formatted(employeeNumber.value()));
         }
         requireSalaryMatchesCountry(newSalary, country);
-        if (!newSalary.isPositive()) {
-            throw new IllegalArgumentException("a salary must be greater than zero");
-        }
+        requirePositive(newSalary);
         if (newSalary.equals(currentSalary)) {
             throw new IllegalArgumentException(
                     "employee %s is already paid that amount".formatted(employeeNumber.value()));
