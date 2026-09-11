@@ -16,6 +16,28 @@
 --      This migration therefore has no timestamp column at all; salary_revision.changed_at (2.2)
 --      is written by the adapter from the Instant it was passed.
 
+-- The application's own database role, created at the first migration that has a table to
+-- protect. NOLOGIN and no password: attaching a login is provisioning's job, and a credential
+-- does not belong in a migration. The user the application logs in as becomes a member, and
+-- every connection it opens runs SET ROLE salary_app (connection-init-sql in application.yml),
+-- so the grants below bind the running system rather than describing a role nothing connects as
+-- (D097). CURRENT_USER is that login user in every environment, because Flyway migrates over the
+-- application's own connection details.
+--
+-- Convention from here on: every migration that creates a table grants that table in the same
+-- file, so privileges are reviewed with the table rather than remembered later. A table with no
+-- grant fails SchemaGrantsIT at mvn verify, not at first query (D100).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'salary_app') THEN
+        CREATE ROLE salary_app NOLOGIN;
+    END IF;
+END
+$$;
+
+GRANT salary_app TO CURRENT_USER;
+GRANT USAGE ON SCHEMA public TO salary_app;
+
 -- Columns only. Authentication is 2.9: this exists now so the seeded users the demo logs in as
 -- have somewhere to live, and so salary_revision.changed_by (2.2) has a table to reference.
 CREATE TABLE app_user (
@@ -28,6 +50,9 @@ CREATE TABLE app_user (
     -- for a domain concept.
     role          varchar NOT NULL
 );
+
+-- Read to authenticate, inserted by the seed. Nothing in committed scope updates a user.
+GRANT SELECT, INSERT ON app_user TO salary_app;
 
 -- Column for column, the Employee aggregate: nothing here that the domain does not hold, so the
 -- adapter at 2.5 maps rather than invents. Notably absent, and absent on purpose: manager_id,
@@ -70,6 +95,10 @@ CREATE TABLE employee (
     CONSTRAINT employee_seniority_level_is_known
         CHECK (seniority_level IN ('JUNIOR', 'MID', 'SENIOR', 'LEAD', 'PRINCIPAL'))
 );
+
+-- Pay changes in place and people are onboarded, so employee is writable. No DELETE: nobody is
+-- deleted, they are TERMINATED.
+GRANT SELECT, INSERT, UPDATE ON employee TO salary_app;
 
 -- The directory's filter dimensions (04-API-DESIGN: ?department=&country=&level=), indexed now
 -- because their consumer is the search query at 2.6, not because a filtered column looks like it

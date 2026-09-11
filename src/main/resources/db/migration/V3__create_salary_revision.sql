@@ -53,36 +53,8 @@ CREATE TABLE salary_revision (
 -- otherwise duplicate or skip a row across pages.
 CREATE INDEX ix_revision_employee ON salary_revision (employee_id, changed_at DESC, id DESC);
 
--- The application's own role, introduced here because this is the first table whose privileges
--- are a domain guarantee rather than an operational detail. NOLOGIN and no password: attaching a
--- login to it is provisioning's job, and a credential does not belong in a migration. In a
--- deployed environment the connecting user is a member of this role; the integration tests reach
--- it with SET ROLE, which is also how 2.3 proves the database refuses what is not granted.
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'salary_app') THEN
-        CREATE ROLE salary_app NOLOGIN;
-    END IF;
-END
-$$;
-
-GRANT USAGE ON SCHEMA public TO salary_app;
-
--- Least privilege, stated as what each table is for. Pay changes in place, so employee is
--- writable; nobody deletes an employee, they are TERMINATED. Users are read to authenticate and
--- inserted by the seed.
-GRANT SELECT, INSERT, UPDATE ON employee TO salary_app;
-GRANT SELECT, INSERT ON app_user TO salary_app;
-
--- The whole point. No UPDATE and no DELETE, so a written revision cannot be altered or removed by
--- the application at all - not by a bug, not by a repository method nobody reviewed, not by a
--- console session using the application's credentials.
+-- The whole point, and the one table in the schema the application cannot rewrite. No UPDATE and
+-- no DELETE, so a revision cannot be altered or removed by the application at all - not by a bug,
+-- not by a repository method nobody reviewed, not by a console session using its credentials.
+-- The role itself and the application's membership in it are created in V2.
 GRANT SELECT, INSERT ON salary_revision TO salary_app;
-
--- And the part that makes all of it real: the user the application logs in as becomes a member of
--- the role, and every connection it opens runs SET ROLE salary_app (connection-init-sql in
--- application.yml). Without this the application connects as the owner of salary_revision, which
--- holds DELETE on it whatever is granted above, and the append-only guarantee is a statement about
--- a role that never executes a query. CURRENT_USER is the login user in every environment because
--- Flyway migrates over the application's own connection details (D097).
-GRANT salary_app TO CURRENT_USER;
