@@ -34,11 +34,8 @@ PLAN.md task 1.9 — `Employee` aggregate plus typed identifiers (`EmployeeNumbe
 `CountryCode`), validated in compact constructors. Tests first.
 
 ## Gotchas
-- **Two status files exist.** This one is the session handoff installed with `/prime` and `/wrap`;
-  the root `STATUS.md` is an owed-work backlog written before the decision log arrived, and most
-  of its content now duplicates D033/D034/D039. They need reconciling — probably by deleting the
-  root file once its unique row (`changing_salary_to_zero_is_rejected`, owed by 1.10) is recorded
-  as a decision.
+- The root `STATUS.md` collision is resolved: that file is deleted, and its one unique item is
+  now D072. This file is the only status file.
 - **The mutation score does not cover everything.** Pitest mutates no record compact constructor
   unless `-FRECORD` is set, and even then attributes no killer to mutations covered from a test
   class's static initialiser. `Money`'s rounding policy has no mutable construct at all and is
