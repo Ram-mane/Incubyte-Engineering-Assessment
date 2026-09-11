@@ -36,7 +36,7 @@ import com.acme.salarymanagement.shared.SeniorityLevel;
  * about who called whom.
  */
 @WebMvcTest(EmployeeController.class)
-@Import({EmployeeControllerTest.OnePersonDirectory.class, BadRequestHandler.class})
+@Import({EmployeeControllerTest.OnePersonDirectory.class, ProblemHandler.class})
 class EmployeeControllerTest {
 
     static final AtomicReference<DirectoryRequest> LAST_REQUEST = new AtomicReference<>();

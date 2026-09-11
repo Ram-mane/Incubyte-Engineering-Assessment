@@ -1,11 +1,15 @@
 package com.acme.salarymanagement.architecture;
 
+import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.acme.salarymanagement.employee.domain.SalaryRevision;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -120,6 +124,20 @@ class ArchitectureTest {
             .haveNameMatching("set[A-Z].*")
             .because("a setter is a way to change state without producing the record of the change; "
                     + "pay moves through changeSalaryTo, which returns the SalaryRevision that proves it");
+
+    // The audit guarantee is that a revision can only come from changeSalaryTo. That holds while
+    // the aggregate is the only thing that can make one: an adapter able to build a SalaryRevision
+    // from an employee's before and after state would let any code path that changes pay produce
+    // a plausible-looking record, and the log would go on looking trustworthy while no longer
+    // being derived from the only method allowed to move pay.
+    @ArchTest
+    static final ArchRule only_the_domain_creates_a_salary_revision = noClasses()
+            .that()
+            .resideOutsideOfPackage("..domain..")
+            .should()
+            .callConstructorWhere(target(owner(type(SalaryRevision.class))))
+            .because("a revision is what changeSalaryTo produces; anything that can mint one "
+                    + "separately makes the audit log a record of what someone chose to write down");
 
     @ArchTest
     static final ArchRule dependencies_are_injected_through_constructors = fields().should()

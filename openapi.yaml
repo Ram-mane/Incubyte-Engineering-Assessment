@@ -93,6 +93,84 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /employees/{id}/salary:
+    put:
+      summary: Change an employee's pay
+      description: |
+        The only way pay changes. A `PATCH` of the employee resource cannot touch salary, because
+        a pay change carries a mandatory reason and must produce an audit entry - the shape of the
+        API enforces what the domain enforces.
+
+        The salary update and the audit record are written in one transaction. Either both happen
+        or neither does: a salary that moved without a record of who moved it is the one outcome
+        this system is built to prevent.
+      operationId: changeSalary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeSalaryRequest'
+      responses:
+        "200":
+          description: The employee, as they now are
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        "400":
+          description: |
+            A field is missing, or a value cannot exist. **Also, for now, every rejection the
+            domain makes**: a non-positive amount, a currency that is not the employee's country's,
+            or a change to the amount already held. 04-API-DESIGN specifies 422 and 409 for those,
+            and they become that when the domain distinguishes its rejections by type rather than
+            by message, with the RFC 7807 work. Documented here as what the API actually returns.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "404":
+          description: No employee with that id
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "422":
+          description: The employee is TERMINATED, so their pay cannot change
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /employees/{id}/salary-revisions:
+    get:
+      summary: An employee's pay history
+      description: |
+        Newest first, in the order the index holds them, so the read is an index scan rather than
+        a sort. Append-only: there is no endpoint to edit or delete an entry, and the application's
+        database role is granted neither.
+      operationId: salaryRevisions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: The log, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalaryRevision'
+
   /employees/filter-options:
     get:
       summary: What there is to filter the directory by
@@ -111,6 +189,58 @@ paths:
 
 components:
   schemas:
+
+    ChangeSalaryRequest:
+      type: object
+      required: [amount, currency, reason, actorId]
+      properties:
+        amount:
+          type: string
+          description: A decimal string, for the same reason salaries leave as strings.
+          pattern: '^\d+(\.\d+)?$'
+          example: "1380000.00"
+        currency:
+          type: string
+          description: Must be the currency of the employee's country. Nothing is converted.
+          example: INR
+        reason:
+          $ref: '#/components/schemas/ChangeReason'
+        note:
+          type: string
+          description: Optional free text. Blank is stored as no note.
+          example: Annual merit review
+        actorId:
+          type: string
+          format: uuid
+          description: |
+            Who is making the change. **Temporary**: this belongs in the authenticated principal
+            and moves there when authentication lands. It is validated against the user table
+            rather than trusted, and has no default - a revision credited to an invented system
+            account answers "who changed this" with a fiction.
+
+    SalaryRevision:
+      type: object
+      required: [previousAmount, newAmount, reason, changedBy, changedAt]
+      properties:
+        previousAmount:
+          $ref: '#/components/schemas/Money'
+        newAmount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          $ref: '#/components/schemas/ChangeReason'
+        changedBy:
+          type: string
+          format: uuid
+        changedAt:
+          type: string
+          format: date-time
+          description: RFC 3339 UTC. The instant the application recorded, not the instant the row was written.
+        note:
+          type: string
+
+    ChangeReason:
+      type: string
+      enum: [MERIT, PROMOTION, MARKET_ADJUSTMENT, CORRECTION]
 
     DirectoryFilterOptions:
       type: object
@@ -153,10 +283,14 @@ components:
             How many employees match the filters. **Present on the first page only** - it is not
             recounted for every page, which is the cost keyset paging exists to avoid.
 
-            Named `approx` deliberately. Today, at ten thousand employees, it is an exact count
-            off the same indexes and costs a few milliseconds. When the table is large enough for
-            that to hurt it becomes an estimate from `pg_class.reltuples`, and no client changes,
-            because no client was ever promised an exact number.
+            **Today this value is exact.** At ten thousand employees a filtered `COUNT(*)` off
+            the same indexes costs a few milliseconds, so that is what is returned - a client
+            that displays it as a precise figure is displaying a precise figure.
+
+            The name is the contract, not the current implementation: it reserves the right to
+            become an estimate from `pg_class.reltuples` when the table is large enough for the
+            count to hurt, at which point no client needs to change because none was ever
+            promised exactness. Do not build a total that must reconcile on this field.
           example: 10000
 
     Employee:

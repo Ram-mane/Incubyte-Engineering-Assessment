@@ -2,6 +2,7 @@ package com.acme.salarymanagement.employee.application.port.out;
 
 import java.util.UUID;
 
+import com.acme.salarymanagement.employee.domain.Employee;
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.Department;
 import com.acme.salarymanagement.shared.JobTitle;
@@ -25,4 +26,23 @@ public record EmployeeSummary(
         Department department,
         JobTitle jobTitle,
         SeniorityLevel level,
-        Money salary) {}
+        Money salary) {
+
+    /**
+     * The aggregate as the directory shows it. Lets a use case that already holds the employee
+     * answer with them, rather than writing them and reading them back.
+     */
+    public static EmployeeSummary of(Employee employee) {
+        return new EmployeeSummary(
+                employee.id().value(),
+                employee.employeeNumber().value(),
+                employee.name().given(),
+                employee.name().family(),
+                employee.email().value(),
+                employee.country(),
+                employee.department(),
+                employee.jobTitle(),
+                employee.level(),
+                employee.currentSalary());
+    }
+}

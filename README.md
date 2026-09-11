@@ -112,6 +112,29 @@ Written **before and during** the build, not afterwards — the git history show
 | [ADRs](docs/adr/) | Thirteen decision records, each with rejected alternatives — including one superseded and kept |
 | [Clarifications](docs/CLARIFICATIONS.md) | The ten questions asked before building, the answers, and what each changed |
 
+## Pagination, and the evidence it works
+
+The directory is keyset-paged, not `OFFSET`-paged: a page is a place to resume from, given as an
+opaque cursor, so the ten-thousandth row costs what the first one does and nobody is shown twice
+when a colleague is hired mid-browse.
+
+That is a claim about correctness, so here is the check. This walks the entire seeded directory
+through the live API, following only the cursors the API itself returned, and compares what came
+back against what exists:
+
+```
+pages walked : 200
+rows returned: 10000
+distinct ids : 10000
+duplicates   : 0
+every employee seen exactly once: True
+```
+
+`OFFSET` cannot promise the last two lines. It counts positions rather than naming a place, so a
+row inserted during paging shifts everything after it — silently repeating one row and skipping
+another, which on a payroll screen is a person who appears twice and a person who does not appear
+at all.
+
 ## Engineering notes
 
 - **ArchUnit enforces the architecture.** Framework code in the domain, a port in the wrong package,
