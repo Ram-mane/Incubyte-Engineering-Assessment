@@ -59,6 +59,17 @@ class SalaryBandTest {
         }
 
         @Test
+        void a_band_carries_the_natural_key_it_is_found_by() {
+            // It has no id of its own (D083), so role, level and country are how a band is
+            // located - the unique key in 05-DATA-MODEL.md and the only way to match an employee.
+            var band = seniorEngineerInIndia();
+
+            assertThat(band.jobTitle()).isEqualTo(ENGINEER);
+            assertThat(band.level()).isEqualTo(SeniorityLevel.SENIOR);
+            assertThat(band.country()).isEqualTo(INDIA);
+        }
+
+        @Test
         void a_midpoint_below_the_minimum_is_rejected() {
             // I10.
             assertThatThrownBy(() -> new SalaryBand(
