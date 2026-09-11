@@ -1,10 +1,15 @@
 package com.acme.salarymanagement;
 
+import static com.acme.salarymanagement.support.SchemaCatalogue.columnsOf;
+import static com.acme.salarymanagement.support.SchemaCatalogue.generatedValuesIn;
+import static com.acme.salarymanagement.support.SchemaCatalogue.indexesOn;
+import static com.acme.salarymanagement.support.SchemaCatalogue.primaryKeyOf;
+import static com.acme.salarymanagement.support.SchemaCatalogue.tablesInTheSchema;
+import static com.acme.salarymanagement.support.SchemaCatalogue.triggersOn;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -71,10 +76,11 @@ class EmployeeSchemaIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void the_schema_has_no_table_but_the_two_it_needs(@Autowired JdbcTemplate jdbc) {
+    void department_is_a_column_on_employee_rather_than_a_table_to_join(@Autowired JdbcTemplate jdbc) {
         assertThat(tablesInTheSchema(jdbc))
-                .as("department is a column on employee, not a table to join: see D092")
-                .containsExactlyInAnyOrder("app_user", "employee", "flyway_schema_history");
+                .as("a lookup table would put a join in front of every query that groups by it: D092")
+                .doesNotContain("department");
+        assertThat(columnsOf(jdbc, "employee")).containsKey("department");
     }
 
     @Test
@@ -143,71 +149,13 @@ class EmployeeSchemaIT extends PostgresIntegrationTest {
 
     @Test
     void the_directory_filter_columns_are_indexed(@Autowired JdbcTemplate jdbc) {
-        var definitions =
-                jdbc.queryForList("SELECT indexdef FROM pg_indexes WHERE tablename = ?", String.class, "employee");
+        var definitions = indexesOn(jdbc, "employee");
 
         for (String column : List.of("country_code", "department", "job_title", "seniority_level")) {
             assertThat(definitions)
                     .as("the directory filters on %s, and 2.6 queries it against ten thousand rows", column)
                     .anyMatch(definition -> definition.contains("(" + column + ")"));
         }
-    }
-
-    /** Column name to type and nullability, exactly as PostgreSQL reports it. */
-    private static Map<String, String> columnsOf(JdbcTemplate jdbc, String table) {
-        var columns = new LinkedHashMap<String, String>();
-        jdbc.queryForList(
-                        """
-                        SELECT a.attname                             AS name,
-                               format_type(a.atttypid, a.atttypmod)  AS type,
-                               a.attnotnull                          AS required
-                        FROM   pg_attribute a
-                        WHERE  a.attrelid = to_regclass(?)
-                          AND  a.attnum > 0
-                          AND  NOT a.attisdropped
-                        ORDER BY a.attnum
-                        """,
-                        table)
-                .forEach(row -> columns.put(
-                        (String) row.get("name"),
-                        row.get("type") + (Boolean.TRUE.equals(row.get("required")) ? " NOT NULL" : " NULL")));
-        return columns;
-    }
-
-    private static List<String> primaryKeyOf(JdbcTemplate jdbc, String table) {
-        return jdbc.queryForList(
-                """
-                SELECT a.attname
-                FROM   pg_index i
-                JOIN   pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)
-                WHERE  i.indrelid = to_regclass(?)
-                  AND  i.indisprimary
-                """,
-                String.class,
-                table);
-    }
-
-    /** Any column the database would fill in by itself: a DEFAULT expression or an identity. */
-    private static List<String> generatedValuesIn(JdbcTemplate jdbc, String table) {
-        return jdbc.queryForList(
-                """
-                SELECT a.attname || ' = ' || COALESCE(pg_get_expr(d.adbin, d.adrelid), 'generated identity')
-                FROM   pg_attribute a
-                LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
-                WHERE  a.attrelid = to_regclass(?)
-                  AND  a.attnum > 0
-                  AND  NOT a.attisdropped
-                  AND  (d.adbin IS NOT NULL OR a.attidentity <> '')
-                """,
-                String.class,
-                table);
-    }
-
-    private static List<String> triggersOn(JdbcTemplate jdbc, String table) {
-        return jdbc.queryForList(
-                "SELECT tgname FROM pg_trigger WHERE tgrelid = to_regclass(?) AND NOT tgisinternal",
-                String.class,
-                table);
     }
 
     private static void insertEmployee(JdbcTemplate jdbc, String number, String level, String status, String salary) {

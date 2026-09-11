@@ -35,7 +35,7 @@ erDiagram
         varchar role
     }
     SALARY_REVISION {
-        bigint id PK
+        uuid id PK
         uuid employee_id FK
         numeric previous_amount
         numeric new_amount
@@ -43,7 +43,7 @@ erDiagram
         varchar change_reason
         uuid changed_by FK
         timestamptz changed_at
-        text note
+        varchar note
     }
     SALARY_BAND {
         bigint id PK
@@ -113,7 +113,7 @@ CREATE INDEX ix_employee_rollup
   INCLUDE (salary_amount, salary_currency) WHERE status = 'ACTIVE';
 
 -- Employee's own audit log, newest first.
-CREATE INDEX ix_revision_employee ON salary_revision (employee_id, changed_at DESC);
+CREATE INDEX ix_revision_employee ON salary_revision (employee_id, changed_at DESC, id DESC);
 
 -- Band matching.
 CREATE UNIQUE INDEX ux_band_key ON salary_band (job_title, seniority_level, country_code);
