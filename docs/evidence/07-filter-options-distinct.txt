@@ -1,0 +1,37 @@
+-- filter-options dropdown: SELECT DISTINCT department, which is what justifies the
+-- single-column index added in V2. Captured with the index and without it.
+
+== with ix_employee_department ==
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Unique  (cost=0.29..215.28 rows=8 width=9) (actual time=0.039..1.476 rows=8 loops=1)
+   Buffers: shared hit=10
+   ->  Index Only Scan using ix_employee_department on employee  (cost=0.29..190.28 rows=10000 width=9) (actual time=0.038..0.726 rows=10000 loops=1)
+         Heap Fetches: 0
+         Buffers: shared hit=10
+ Planning:
+   Buffers: shared hit=271
+ Planning Time: 1.792 ms
+ Execution Time: 1.534 ms
+(9 rows)
+
+
+== without any single-column index on department ==
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=319.20..319.22 rows=8 width=9) (actual time=2.923..2.924 rows=8 loops=1)
+   Sort Key: department
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=197
+   ->  HashAggregate  (cost=319.00..319.08 rows=8 width=9) (actual time=2.868..2.869 rows=8 loops=1)
+         Group Key: department
+         Batches: 1  Memory Usage: 24kB
+         Buffers: shared hit=194
+         ->  Seq Scan on employee  (cost=0.00..294.00 rows=10000 width=9) (actual time=0.004..0.788 rows=10000 loops=1)
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=183
+ Planning Time: 1.184 ms
+ Execution Time: 3.060 ms
+(14 rows)
+

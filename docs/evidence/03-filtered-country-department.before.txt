@@ -1,0 +1,24 @@
+-- 03-filtered-country-department, before the index
+-- captured 2026-09-11T12:56:56Z against the seeded dataset
+
+                                                                    QUERY PLAN                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=223.42..223.54 rows=50 width=37) (actual time=0.528..0.534 rows=50 loops=1)
+   Buffers: shared hit=131 read=4
+   ->  Sort  (cost=223.42..223.94 rows=209 width=37) (actual time=0.527..0.530 rows=50 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: top-N heapsort  Memory: 30kB
+         Buffers: shared hit=131 read=4
+         ->  Bitmap Heap Scan on employee e  (cost=10.43..216.48 rows=209 width=37) (actual time=0.085..0.340 rows=215 loops=1)
+               Recheck Cond: (((department)::text = 'Engineering'::text) AND (country_code = 'DE'::bpchar) AND ((status)::text = 'ACTIVE'::text))
+               Heap Blocks: exact=125
+               Buffers: shared hit=125 read=4
+               ->  Bitmap Index Scan on ix_employee_rollup  (cost=0.00..10.38 rows=209 width=0) (actual time=0.064..0.065 rows=215 loops=1)
+                     Index Cond: (((department)::text = 'Engineering'::text) AND (country_code = 'DE'::bpchar))
+                     Buffers: shared read=4
+ Planning:
+   Buffers: shared hit=246 read=1
+ Planning Time: 1.780 ms
+ Execution Time: 0.589 ms
+(17 rows)
+

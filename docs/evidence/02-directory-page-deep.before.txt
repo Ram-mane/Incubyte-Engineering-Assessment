@@ -1,0 +1,21 @@
+-- 02-directory-page-deep, before the index
+-- captured 2026-09-11T12:56:56Z against the seeded dataset
+
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=369.01..369.01 rows=1 width=109) (actual time=2.038..2.049 rows=49 loops=1)
+   Buffers: shared hit=200
+   ->  Sort  (cost=369.01..369.01 rows=1 width=109) (actual time=2.037..2.041 rows=49 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: quicksort  Memory: 36kB
+         Buffers: shared hit=200
+         ->  Seq Scan on employee e  (cost=0.00..369.00 rows=1 width=109) (actual time=0.038..1.897 rows=49 loops=1)
+               Filter: (ROW((family_name)::text, (given_name)::text, id) > ROW('Whitfield'::text, 'Tobias'::text, '00000000-0135-282f-0000-0000000007c0'::uuid))
+               Rows Removed by Filter: 9951
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=271
+ Planning Time: 1.778 ms
+ Execution Time: 2.132 ms
+(14 rows)
+

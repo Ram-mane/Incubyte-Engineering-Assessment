@@ -1,0 +1,16 @@
+-- 02-directory-page-deep, after the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                                          QUERY PLAN                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.29..8.30 rows=1 width=109) (actual time=0.053..0.189 rows=49 loops=1)
+   Buffers: shared hit=50 read=2
+   ->  Index Scan using ix_employee_keyset on employee e  (cost=0.29..8.30 rows=1 width=109) (actual time=0.052..0.184 rows=49 loops=1)
+         Index Cond: (ROW((family_name)::text, (given_name)::text, id) > ROW('Whitfield'::text, 'Tobias'::text, '00000000-0135-282f-0000-0000000007c0'::uuid))
+         Buffers: shared hit=50 read=2
+ Planning:
+   Buffers: shared hit=299
+ Planning Time: 2.031 ms
+ Execution Time: 0.256 ms
+(9 rows)
+

@@ -1,0 +1,19 @@
+-- 01-directory-page, before the index
+-- captured 2026-09-11T12:56:56Z against the seeded dataset
+
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=626.19..626.32 rows=50 width=109) (actual time=5.111..5.117 rows=50 loops=1)
+   Buffers: shared hit=200
+   ->  Sort  (cost=626.19..651.19 rows=10000 width=109) (actual time=5.110..5.112 rows=50 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: top-N heapsort  Memory: 42kB
+         Buffers: shared hit=200
+         ->  Seq Scan on employee e  (cost=0.00..294.00 rows=10000 width=109) (actual time=0.005..1.668 rows=10000 loops=1)
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=290 read=2
+ Planning Time: 1.865 ms
+ Execution Time: 5.177 ms
+(12 rows)
+

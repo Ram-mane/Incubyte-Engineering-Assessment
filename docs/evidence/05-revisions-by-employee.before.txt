@@ -1,0 +1,27 @@
+-- 05-revisions-by-employee, before the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=931.35..931.36 rows=3 width=102) (actual time=2.673..2.675 rows=3 loops=1)
+   Buffers: shared hit=563 read=2
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.29..0.33 rows=1 width=27) (actual time=0.057..0.057 rows=1 loops=1)
+           Buffers: shared hit=1 read=2
+           ->  Index Only Scan using ix_employee_keyset on employee  (cost=0.29..402.29 rows=10000 width=27) (actual time=0.056..0.056 rows=1 loops=1)
+                 Heap Fetches: 0
+                 Buffers: shared hit=1 read=2
+   ->  Sort  (cost=931.02..931.03 rows=3 width=102) (actual time=2.672..2.673 rows=3 loops=1)
+         Sort Key: salary_revision.changed_at DESC, salary_revision.id DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=563 read=2
+         ->  Seq Scan on salary_revision  (cost=0.00..931.00 rows=3 width=102) (actual time=0.108..2.621 rows=3 loops=1)
+               Filter: (employee_id = $0)
+               Rows Removed by Filter: 29997
+               Buffers: shared hit=557 read=2
+ Planning:
+   Buffers: shared hit=324
+ Planning Time: 2.622 ms
+ Execution Time: 2.763 ms
+(20 rows)
+

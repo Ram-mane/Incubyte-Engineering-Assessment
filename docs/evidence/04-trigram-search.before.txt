@@ -1,0 +1,21 @@
+-- 04-trigram-search, before the index
+-- captured 2026-09-11T12:56:56Z against the seeded dataset
+
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=419.02..419.03 rows=3 width=27) (actual time=11.828..11.844 rows=50 loops=1)
+   Buffers: shared hit=200
+   ->  Sort  (cost=419.02..419.03 rows=3 width=27) (actual time=11.827..11.831 rows=50 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: top-N heapsort  Memory: 31kB
+         Buffers: shared hit=200
+         ->  Seq Scan on employee e  (cost=0.00..419.00 rows=3 width=27) (actual time=0.039..11.475 rows=389 loops=1)
+               Filter: ((((((given_name)::text || ' '::text) || (family_name)::text) || ' '::text) || (email)::text) ~~* '%whitfi%'::text)
+               Rows Removed by Filter: 9611
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=236
+ Planning Time: 1.566 ms
+ Execution Time: 11.888 ms
+(14 rows)
+

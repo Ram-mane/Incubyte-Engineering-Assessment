@@ -1,0 +1,22 @@
+-- 06-rollup-by-dimension, before the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=420.94..421.06 rows=48 width=52) (actual time=4.668..4.670 rows=48 loops=1)
+   Sort Key: department, country_code
+   Sort Method: quicksort  Memory: 27kB
+   Buffers: shared hit=200
+   ->  HashAggregate  (cost=419.00..419.60 rows=48 width=52) (actual time=4.567..4.580 rows=48 loops=1)
+         Group Key: department, country_code
+         Batches: 1  Memory Usage: 48kB
+         Buffers: shared hit=194
+         ->  Seq Scan on employee e  (cost=0.00..319.00 rows=10000 width=18) (actual time=0.007..1.667 rows=10000 loops=1)
+               Filter: ((status)::text = 'ACTIVE'::text)
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=267 read=2
+ Planning Time: 4.065 ms
+ Execution Time: 4.786 ms
+(15 rows)
+

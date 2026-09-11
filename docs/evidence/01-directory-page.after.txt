@@ -1,0 +1,15 @@
+-- 01-directory-page, after the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                                  QUERY PLAN                                                                   
+-----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.29..6.17 rows=50 width=109) (actual time=0.023..0.136 rows=50 loops=1)
+   Buffers: shared hit=49
+   ->  Index Scan using ix_employee_keyset on employee e  (cost=0.29..1177.75 rows=10000 width=109) (actual time=0.022..0.131 rows=50 loops=1)
+         Buffers: shared hit=49
+ Planning:
+   Buffers: shared hit=298
+ Planning Time: 2.177 ms
+ Execution Time: 0.196 ms
+(8 rows)
+

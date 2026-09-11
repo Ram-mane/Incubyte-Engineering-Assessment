@@ -1,0 +1,22 @@
+-- 05-revisions-by-employee, after the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.61..16.16 rows=3 width=102) (actual time=0.103..0.113 rows=3 loops=1)
+   Buffers: shared hit=8
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=0.29..0.33 rows=1 width=27) (actual time=0.053..0.054 rows=1 loops=1)
+           Buffers: shared hit=3
+           ->  Index Only Scan using ix_employee_keyset on employee  (cost=0.29..402.29 rows=10000 width=27) (actual time=0.053..0.053 rows=1 loops=1)
+                 Heap Fetches: 0
+                 Buffers: shared hit=3
+   ->  Index Scan using ix_revision_employee on salary_revision  (cost=0.29..15.84 rows=3 width=102) (actual time=0.102..0.111 rows=3 loops=1)
+         Index Cond: (employee_id = $0)
+         Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=357
+ Planning Time: 3.619 ms
+ Execution Time: 0.249 ms
+(15 rows)
+

@@ -94,13 +94,15 @@ The directory is the screen the HR Manager lives in: 10,000 rows, filtered by de
 level and status, free-text searched by name, sorted, and paged.
 
 ```sql
--- Directory filtering. Covering, so the common page is an index-only scan.
-CREATE INDEX ix_employee_filter
-  ON employee (status, department, country_code, seniority_level)
-  INCLUDE (family_name, given_name, job_title, salary_amount, salary_currency);
+-- Directory filtering: SPECIFIED, MEASURED, NOT SHIPPED. A covering index on
+--   (status, department, country_code, seniority_level) INCLUDE (the rest of the row)
+-- was created and the planner never chose it: with ix_employee_rollup below available, the
+-- filtered query prefers that one - narrower, already excluding non-ACTIVE rows, fewer index
+-- pages to walk. See docs/evidence/03-filtered-country-department.*.txt. Removed rather than
+-- kept to make this document true. Revisit at the 100k comparison (PLAN 3.12).
 
 -- Keyset pagination: the sort key must be a total order.
-CREATE INDEX ix_employee_keyset ON employee (family_name, id);
+CREATE INDEX ix_employee_keyset ON employee (family_name, given_name, id);
 
 -- Free-text name/email search without a leading-wildcard seq scan.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

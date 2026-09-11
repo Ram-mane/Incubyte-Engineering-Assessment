@@ -1,0 +1,21 @@
+-- filtered directory query, with NO secondary index on employee at all
+-- the true baseline: what the query costs when nothing but the primary key exists
+
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=375.94..376.07 rows=50 width=37) (actual time=1.797..1.803 rows=50 loops=1)
+   Buffers: shared hit=200
+   ->  Sort  (cost=375.94..376.47 rows=209 width=37) (actual time=1.796..1.798 rows=50 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: top-N heapsort  Memory: 30kB
+         Buffers: shared hit=200
+         ->  Seq Scan on employee e  (cost=0.00..369.00 rows=209 width=37) (actual time=0.012..1.618 rows=215 loops=1)
+               Filter: (((status)::text = 'ACTIVE'::text) AND (country_code = 'DE'::bpchar) AND ((department)::text = 'Engineering'::text))
+               Rows Removed by Filter: 9785
+               Buffers: shared hit=194
+ Planning:
+   Buffers: shared hit=109
+ Planning Time: 0.760 ms
+ Execution Time: 1.839 ms
+(14 rows)
+

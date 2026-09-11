@@ -1,0 +1,24 @@
+-- 04-trigram-search, after the index
+-- captured 2026-09-11T12:56:57Z against the seeded dataset
+
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=252.80..252.93 rows=50 width=27) (actual time=2.017..2.028 rows=50 loops=1)
+   Buffers: shared hit=182
+   ->  Sort  (cost=252.80..253.31 rows=202 width=27) (actual time=2.015..2.020 rows=50 loops=1)
+         Sort Key: family_name, given_name, id
+         Sort Method: top-N heapsort  Memory: 31kB
+         Buffers: shared hit=182
+         ->  Bitmap Heap Scan on employee e  (cost=39.92..246.09 rows=202 width=27) (actual time=0.191..1.467 rows=389 loops=1)
+               Recheck Cond: ((((((given_name)::text || ' '::text) || (family_name)::text) || ' '::text) || (email)::text) ~~* '%whitfi%'::text)
+               Heap Blocks: exact=167
+               Buffers: shared hit=176
+               ->  Bitmap Index Scan on ix_employee_search_trgm  (cost=0.00..39.87 rows=202 width=0) (actual time=0.153..0.153 rows=389 loops=1)
+                     Index Cond: ((((((given_name)::text || ' '::text) || (family_name)::text) || ' '::text) || (email)::text) ~~* '%whitfi%'::text)
+                     Buffers: shared hit=9
+ Planning:
+   Buffers: shared hit=316 dirtied=1
+ Planning Time: 4.563 ms
+ Execution Time: 2.329 ms
+(17 rows)
+
