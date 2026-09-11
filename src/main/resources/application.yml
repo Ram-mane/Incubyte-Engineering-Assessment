@@ -11,6 +11,12 @@ spring:
 
   flyway:
     enabled: true
+    # Defence in depth against inherited session state: a migration connection says who it is
+    # rather than trusting what it was handed. Harmless on a clean connection, and the difference
+    # between a working deploy and "permission denied for table flyway_schema_history" on one
+    # that arrived from a pooler with SET ROLE still in effect.
+    init-sqls:
+      - RESET ROLE
 
   jpa:
     hibernate:

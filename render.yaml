@@ -17,6 +17,16 @@ services:
     healthCheckPath: /actuator/health
     autoDeployTrigger: commit
     envVars:
+      # MUST be Neon's DIRECT endpoint, not the one whose host contains `-pooler`.
+      #
+      # The application establishes its restricted identity with `SET ROLE salary_app` on every
+      # connection (D097), and that is session state. Neon's pooled endpoint is PgBouncer in
+      # transaction mode, which hands one server connection between clients: the role set by one
+      # arrives with the next. That took the API down with `permission denied for table
+      # flyway_schema_history` - Flyway holding a connection that had become salary_app - and it
+      # can fail the other way too, an application connection inheriting the owner, which would
+      # leave the append-only grant binding nothing at all. DatabaseIdentityCheck refuses to start
+      # rather than run in either state, and says so in the log (D110).
       - key: SPRING_DATASOURCE_URL
         sync: false
       - key: SPRING_DATASOURCE_USERNAME
