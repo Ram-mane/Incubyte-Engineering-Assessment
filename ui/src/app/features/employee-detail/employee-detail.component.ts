@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 
 import { SessionService } from '../../core/auth/session.service';
+import { EnumLabelPipe } from '../../shared/enum-label.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { ChangeSalaryRequest } from '../employees/employee.model';
 import { ChangeSalaryDialogComponent } from './change-salary-dialog.component';
@@ -33,6 +34,7 @@ const BAND_POSITIONS: Record<string, string> = {
   standalone: true,
   imports: [
     DatePipe,
+    EnumLabelPipe,
     MatButtonModule,
     MatCardModule,
     MatDialogModule,

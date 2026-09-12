@@ -88,7 +88,7 @@ describe('EmployeeDetailComponent', () => {
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('1,200,000');
     expect(rows[0].textContent).toContain('1,380,000');
-    expect(rows[0].textContent).toContain('MERIT');
+    expect(rows[0].textContent).toContain('Merit');
   });
 
   it('says who made each change, by name rather than by id', async () => {

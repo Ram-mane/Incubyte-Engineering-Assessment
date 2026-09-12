@@ -152,7 +152,8 @@ describe('ChangeSalaryDialogComponent', () => {
     expect(amountInput().value).toBe('1500000');
     // Everything they entered, not only the amount: losing the reason or the note would make them
     // redo work the refusal had nothing to do with.
-    expect(element.querySelector<HTMLElement>('mat-select')?.textContent).toContain('MERIT');
+    // The label, because that is what the dropdown now shows; the value posted is still MERIT.
+    expect(element.querySelector<HTMLElement>('mat-select')?.textContent).toContain('Merit');
   });
 
   it("shows the server's reason against the field it is about", async () => {

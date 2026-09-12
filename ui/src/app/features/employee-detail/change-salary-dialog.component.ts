@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Observable } from 'rxjs';
 
+import { EnumLabelPipe } from '../../shared/enum-label.pipe';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { BandView, ChangeSalaryRequest, Employee } from '../employees/employee.model';
 
@@ -42,6 +43,7 @@ export interface ChangeSalaryDialogData {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    EnumLabelPipe,
     MoneyPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
