@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { DirectoryFilterOptions } from '../../core/api/filter-options.model';
-import { DashboardQuery, PayrollSummary } from './dashboard.model';
+import { BreakdownDimension, DashboardQuery, PayrollBreakdown, PayrollSummary } from './dashboard.model';
 
 /**
  * What the dashboard screen knows: what it is looking at, and the one answer that came back.
@@ -22,11 +22,14 @@ export class DashboardFacade {
   private readonly employees = inject(EmployeeApiService);
 
   private readonly current = signal<PayrollSummary | null>(null);
+  private readonly groups = signal<PayrollBreakdown | null>(null);
+  private readonly groupedBy = signal<BreakdownDimension>('department');
   private readonly loading = signal(false);
   private readonly failed = signal(false);
   private readonly query = signal<DashboardQuery>({});
   /** Which request the screen is currently showing. Answers to older ones are dropped. */
   private inFlight = 0;
+  private inFlightBreakdown = 0;
   private readonly options = signal<DirectoryFilterOptions>({
     countries: [],
     departments: [],
@@ -35,6 +38,8 @@ export class DashboardFacade {
   });
 
   readonly summary = this.current.asReadonly();
+  readonly breakdown = this.groups.asReadonly();
+  readonly dimension = this.groupedBy.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly hasFailed = this.failed.asReadonly();
   readonly filters = this.query.asReadonly();
@@ -47,6 +52,12 @@ export class DashboardFacade {
     this.employees.filterOptions().subscribe({ next: (options) => this.options.set(options) });
   }
 
+  /** Look at the same people grouped a different way. The cards do not depend on the grouping. */
+  groupBy(dimension: BreakdownDimension): void {
+    this.groupedBy.set(dimension);
+    this.loadBreakdown(this.query());
+  }
+
   load(query: DashboardQuery): void {
     // Two filter changes in quick succession can come back in either order, and the slower answer
     // is the older question. Painting it would put one filter's figures under another filter's
@@ -55,6 +66,7 @@ export class DashboardFacade {
     this.query.set(query);
     this.loading.set(true);
     this.failed.set(false);
+    this.loadBreakdown(query);
     this.api.summary(query).subscribe({
       next: (summary) => {
         if (request !== this.inFlight) {
@@ -72,6 +84,24 @@ export class DashboardFacade {
         this.current.set(null);
         this.failed.set(true);
         this.loading.set(false);
+      },
+    });
+  }
+
+  private loadBreakdown(query: DashboardQuery): void {
+    const request = ++this.inFlightBreakdown;
+    this.api.breakdown(this.groupedBy(), query).subscribe({
+      next: (breakdown) => {
+        if (request === this.inFlightBreakdown) {
+          this.groups.set(breakdown);
+        }
+      },
+      error: () => {
+        if (request === this.inFlightBreakdown) {
+          // The cards carry the "could not be loaded" message for the screen; a breakdown that
+          // failed shows nothing rather than the previous filter's groups.
+          this.groups.set(null);
+        }
       },
     });
   }

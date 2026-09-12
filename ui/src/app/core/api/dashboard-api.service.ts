@@ -2,7 +2,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { DashboardQuery, PayrollSummary } from '../../features/dashboard/dashboard.model';
+import {
+  BreakdownDimension,
+  DashboardQuery,
+  PayrollBreakdown,
+  PayrollSummary,
+} from '../../features/dashboard/dashboard.model';
 
 /**
  * The only place the dashboard endpoints are named.
@@ -16,14 +21,26 @@ export class DashboardApiService {
   private readonly http = inject(HttpClient);
 
   summary(query: DashboardQuery): Observable<PayrollSummary> {
-    let params = new HttpParams();
-    for (const [name, value] of Object.entries(query)) {
-      // A cleared dropdown is an absent parameter, not `?country=`: `new CountryCode("")` fails
-      // the value object's own guard, so a blank one returns 400 rather than an empty dashboard.
-      if (value !== undefined && value !== null && value !== '') {
-        params = params.set(name, value);
-      }
-    }
-    return this.http.get<PayrollSummary>('/api/v1/dashboard/summary', { params });
+    return this.http.get<PayrollSummary>('/api/v1/dashboard/summary', { params: asParams(query) });
   }
+
+  breakdown(dimension: BreakdownDimension, query: DashboardQuery): Observable<PayrollBreakdown> {
+    return this.http.get<PayrollBreakdown>('/api/v1/dashboard/breakdown', {
+      params: asParams(query).set('groupBy', dimension),
+    });
+  }
+}
+
+/**
+ * A cleared dropdown is an absent parameter, not `?country=`: `new CountryCode("")` fails the value
+ * object's own guard, so a blank one returns 400 rather than an empty dashboard.
+ */
+function asParams(query: DashboardQuery): HttpParams {
+  let params = new HttpParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params = params.set(name, value);
+    }
+  }
+  return params;
 }

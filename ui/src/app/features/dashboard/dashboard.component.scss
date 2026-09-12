@@ -79,4 +79,60 @@
   &__error {
     color: #b3261e;
   }
+
+  &__section {
+    margin-top: 2rem;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    h2 {
+      margin: 0;
+      font-size: 1.125rem;
+    }
+  }
+
+  &__breakdown {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      font-weight: 400;
+    }
+
+    thead th {
+      font-size: 0.8125rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    tbody th {
+      // The group name is the row's header: it is what every figure in the row is about.
+      position: relative;
+      width: 40%;
+    }
+  }
+
+  &__figure-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__bar {
+    display: block;
+    height: 4px;
+    margin-top: 0.35rem;
+    border-radius: 2px;
+    background: #1a73e8;
+    opacity: 0.5;
+  }
 }

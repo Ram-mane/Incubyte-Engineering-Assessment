@@ -4,13 +4,25 @@ import { Subject, of, throwError } from 'rxjs';
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { DashboardFacade } from './dashboard.facade';
-import { DashboardQuery, PayrollSummary } from './dashboard.model';
+import { DashboardQuery, PayrollBreakdown, PayrollSummary } from './dashboard.model';
 
 const summary = (headcount: number, total: string): PayrollSummary => ({
   headcount,
   totalSpend: { amount: total, currency: 'USD' },
   averageSalary: { amount: '123265.10', currency: 'USD' },
   medianSalary: { amount: '113930.00', currency: 'USD' },
+  reportingCurrency: 'USD',
+  ratesAsOf: '2026-09-01',
+});
+
+const breakdown = (...names: string[]): PayrollBreakdown => ({
+  groupedBy: 'department',
+  groups: names.map((name, index) => ({
+    name,
+    headcount: 10 - index,
+    totalSpend: { amount: `${1000 - index * 100}.00`, currency: 'USD' },
+    averageSalary: { amount: '100.00', currency: 'USD' },
+  })),
   reportingCurrency: 'USD',
   ratesAsOf: '2026-09-01',
 });
@@ -31,7 +43,8 @@ describe('DashboardFacade', () => {
 
   beforeEach(() => {
     asked = [];
-    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary']);
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api.breakdown.and.returnValue(of(breakdown('Engineering', 'Finance')));
     employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
     employees.filterOptions.and.returnValue(
       of({ countries: ['DE', 'IN'], departments: ['Engineering'], jobTitles: ['Software Engineer'], levels: ['SENIOR'] }),
@@ -138,6 +151,41 @@ describe('DashboardFacade', () => {
 
     expect(facade.summary()?.headcount).toBe(9842);
     expect(facade.hasFailed()).toBeFalse();
+  });
+
+  it('asks the same filters of the cards and of the breakdown', () => {
+    answering(summary(9842, '1213179157.20'));
+
+    facade.load({ country: 'DE' });
+
+    expect(api.summary).toHaveBeenCalledTimes(1);
+    expect(api.breakdown).toHaveBeenCalledTimes(1);
+    expect(api.breakdown.calls.mostRecent().args[1].country).toBe('DE');
+    expect(facade.breakdown()?.groups.length).toBe(2);
+  });
+
+  it('re-asks only the breakdown when the grouping changes', () => {
+    answering(summary(9842, '1213179157.20'));
+    facade.load({});
+
+    facade.groupBy('country');
+
+    // The cards do not depend on the grouping. Re-fetching them would be a second round trip for
+    // an answer already on screen, and a visible flicker on a control that should feel instant.
+    expect(api.summary).toHaveBeenCalledTimes(1);
+    expect(api.breakdown).toHaveBeenCalledTimes(2);
+    expect(api.breakdown.calls.mostRecent().args[0]).toBe('country');
+  });
+
+  it('keeps the grouping when the filters change', () => {
+    answering(summary(9842, '1213179157.20'));
+    facade.load({});
+    facade.groupBy('level');
+
+    facade.load({ country: 'DE' });
+
+    // Changing a filter is not a request to look at a different dimension.
+    expect(api.breakdown.calls.mostRecent().args[0]).toBe('level');
   });
 
   it('offers the filter values the directory actually contains', () => {

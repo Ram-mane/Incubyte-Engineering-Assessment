@@ -4,7 +4,7 @@ import { of, throwError } from 'rxjs';
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { DashboardComponent } from './dashboard.component';
-import { DashboardQuery, PayrollSummary } from './dashboard.model';
+import { BreakdownDimension, DashboardQuery, PayrollBreakdown, PayrollSummary } from './dashboard.model';
 
 const populated: PayrollSummary = {
   headcount: 9_842,
@@ -37,12 +37,35 @@ const nobody: PayrollSummary = {
 const valueUnder = (element: HTMLElement, headingId: string): string =>
   element.querySelector(`article[aria-labelledby="${headingId}"] p`)?.textContent?.trim() ?? '';
 
+const byDepartment: PayrollBreakdown = {
+  groupedBy: 'department',
+  groups: [
+    {
+      name: 'Engineering',
+      headcount: 4_200,
+      totalSpend: { amount: '620000000.00', currency: 'USD' },
+      averageSalary: { amount: '147619.05', currency: 'USD' },
+    },
+    {
+      name: 'Finance',
+      headcount: 900,
+      totalSpend: { amount: '110000000.00', currency: 'USD' },
+      averageSalary: { amount: '122222.22', currency: 'USD' },
+    },
+  ],
+  reportingCurrency: 'USD',
+  ratesAsOf: '2026-09-01',
+};
+
+const noGroups: PayrollBreakdown = { ...byDepartment, groups: [] };
+
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let element: HTMLElement;
   let api: jasmine.SpyObj<DashboardApiService>;
   let employees: jasmine.SpyObj<EmployeeApiService>;
   let asked: DashboardQuery[];
+  let grouped: BreakdownDimension[];
 
   const showing = (summary: PayrollSummary) => {
     api.summary.and.callFake((query: DashboardQuery) => {
@@ -89,7 +112,12 @@ describe('DashboardComponent', () => {
 
   beforeEach(() => {
     asked = [];
-    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary']);
+    grouped = [];
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api.breakdown.and.callFake((dimension: BreakdownDimension) => {
+      grouped.push(dimension);
+      return of(dimension === 'department' ? byDepartment : { ...byDepartment, groupedBy: dimension });
+    });
     employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
     employees.filterOptions.and.returnValue(
       of({
@@ -110,7 +138,9 @@ describe('DashboardComponent', () => {
 
   it('names each of the four cards with a heading', async () => {
     await render();
-    const headings = Array.from(element.querySelectorAll('h2')).map((h) => h.textContent?.trim());
+    // Scoped to the cards: the screen has other headings, and "every h2 on the page" would break
+    // every time a section is added rather than when a card changes.
+    const headings = Array.from(element.querySelectorAll('article h2')).map((h) => h.textContent?.trim());
 
     expect(headings).toEqual([
       'Total payroll spend',
@@ -196,5 +226,96 @@ describe('DashboardComponent', () => {
     await render();
 
     expect(element.querySelector('[role="alert"]')?.textContent).toContain('could not be loaded');
+  });
+});
+
+describe('DashboardComponent breakdown', () => {
+  let fixture: ComponentFixture<DashboardComponent>;
+  let element: HTMLElement;
+  let api: jasmine.SpyObj<DashboardApiService>;
+  let employees: jasmine.SpyObj<EmployeeApiService>;
+  let grouped: BreakdownDimension[];
+
+  const render = async (breakdown: PayrollBreakdown = byDepartment) => {
+    grouped = [];
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api.summary.and.returnValue(of(populated));
+    api.breakdown.and.callFake((dimension: BreakdownDimension) => {
+      grouped.push(dimension);
+      return of(breakdown);
+    });
+    employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
+    employees.filterOptions.and.returnValue(
+      of({ countries: ['DE'], departments: ['Engineering'], jobTitles: ['Software Engineer'], levels: ['SENIOR'] }),
+    );
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        { provide: DashboardApiService, useValue: api },
+        { provide: EmployeeApiService, useValue: employees },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(DashboardComponent);
+    element = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+  };
+
+  const rows = () => Array.from(element.querySelectorAll('table.dashboard__breakdown tbody tr'));
+
+  it('names the section for the question it answers', async () => {
+    await render();
+
+    expect(element.querySelector('h2#breakdown-heading')?.textContent).toContain('Where the money goes');
+  });
+
+  it('lists one row per group, largest first as the server ordered them', async () => {
+    await render();
+
+    expect(rows().length).toBe(2);
+    expect(rows()[0].textContent).toContain('Engineering');
+    expect(rows()[0].textContent).toContain('4,200');
+    expect(rows()[0].textContent).toContain('620,000,000');
+    expect(rows()[1].textContent).toContain('Finance');
+  });
+
+  it('groups by department until asked otherwise', async () => {
+    await render();
+
+    expect(grouped).toEqual(['department']);
+  });
+
+  it('re-asks the server when the grouping changes rather than regrouping in the browser', async () => {
+    await render();
+
+    // Find the toggle by the label a person reads, then click whatever element it renders.
+    const toggle = Array.from(element.querySelectorAll('mat-button-toggle')).find(
+      (t) => t.textContent?.trim() === 'Country',
+    );
+    toggle!.querySelector<HTMLElement>('button')!.click();
+    fixture.detectChanges();
+
+    // The browser holds the groups of one dimension, never the rows they were computed from.
+    expect(grouped).toEqual(['department', 'country']);
+  });
+
+  it('says there is nothing to break down rather than drawing an empty table', async () => {
+    await render(noGroups);
+
+    expect(rows().length).toBe(0);
+    expect(element.textContent).toContain('No groups to show');
+  });
+
+  it('draws each bar in proportion to the largest group', async () => {
+    await render();
+
+    const bars = Array.from(element.querySelectorAll<HTMLElement>('.dashboard__bar'));
+
+    // 110,000,000 of 620,000,000 is 17.7%. The bar is decoration - the figure beside it is the
+    // number - so it is hidden from assistive technology rather than labelled twice.
+    expect(bars[0].style.width).toBe('100%');
+    expect(bars[1].style.width).toBe('17.74%');
+    expect(bars[0].getAttribute('aria-hidden')).toBe('true');
   });
 });

@@ -98,4 +98,54 @@
       }
     }
   </div>
+
+  <section class="dashboard__section" aria-labelledby="breakdown-heading">
+    <header class="dashboard__section-header">
+      <h2 id="breakdown-heading">Where the money goes</h2>
+      <mat-button-toggle-group
+        [value]="dashboard.dimension()"
+        (change)="dashboard.groupBy($event.value)"
+        aria-label="Group the breakdown by"
+        class="dashboard__dimensions"
+      >
+        @for (option of dimensions; track option) {
+          <mat-button-toggle [value]="option">{{ option | titlecase }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    </header>
+
+    @if (dashboard.breakdown(); as breakdown) {
+      @if (breakdown.groups.length === 0) {
+        <p class="dashboard__empty">No groups to show. Nobody matches these filters.</p>
+      } @else {
+        <table class="dashboard__breakdown">
+          <thead>
+            <tr>
+              <th scope="col">{{ breakdown.groupedBy | titlecase }}</th>
+              <th scope="col" class="dashboard__figure-cell">Total spend</th>
+              <th scope="col" class="dashboard__figure-cell">Headcount</th>
+              <th scope="col" class="dashboard__figure-cell">Average</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (group of breakdown.groups; track group.name) {
+              <tr>
+                <th scope="row">
+                  {{ group.name }}
+                  <span
+                    class="dashboard__bar"
+                    aria-hidden="true"
+                    [style.width]="widthOf(group.totalSpend.amount)"
+                  ></span>
+                </th>
+                <td class="dashboard__figure-cell">{{ group.totalSpend | money }}</td>
+                <td class="dashboard__figure-cell">{{ group.headcount | number }}</td>
+                <td class="dashboard__figure-cell">{{ group.averageSalary | money }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  </section>
 </section>

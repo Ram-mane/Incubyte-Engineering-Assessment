@@ -269,6 +269,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/PayrollSummary'
 
+  /dashboard/breakdown:
+    get:
+      summary: Where the money goes - spend and headcount per group
+      description: |
+        Total spend, headcount and average salary per department, country or level, for everyone
+        matching the same filters the KPI cards use, normalised through the seeded FX table.
+
+        Groups come back largest-spend first, with the group name as a deterministic tiebreak: a
+        chart that reorders itself between filter changes reads as a bug in the data.
+
+        A filter nobody matches returns an empty `groups` array rather than a zero row. There is no
+        group to name, and inventing one would assert that a department exists. The KPI cards are
+        different - they are always four cards, so they read zero.
+
+        `groupBy` is a closed set, read case-insensitively. It is the only value in the API that
+        reaches a `GROUP BY` clause, and it is translated to a column through an exhaustive switch
+        rather than interpolated.
+      operationId: payrollBreakdown
+      parameters:
+        - name: groupBy
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/BreakdownDimension' }
+        - { name: country, in: query, required: false, schema: { type: string, minLength: 2, maxLength: 2 } }
+        - { name: department, in: query, required: false, schema: { type: string } }
+        - { name: jobTitle, in: query, required: false, schema: { type: string } }
+        - { name: level, in: query, required: false, schema: { $ref: '#/components/schemas/SeniorityLevel' } }
+        - name: currency
+          in: query
+          required: false
+          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          schema: { type: string, minLength: 3, maxLength: 3, default: USD }
+      responses:
+        "200":
+          description: One row per group that has at least one employee in it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollBreakdown'
+        "400":
+          description: groupBy missing, or naming a dimension that does not exist
+
   /employees/filter-options:
     get:
       summary: What there is to filter the directory by
@@ -369,6 +411,45 @@ components:
             The date whose exchange rates every figure above was converted through. Reported rather
             than assumed: a total normalised through "whatever rate was current" is a number nobody
             can reproduce next week.
+          example: "2026-09-01"
+
+    BreakdownDimension:
+      type: string
+      description: What a breakdown groups by. Read case-insensitively; returned lower case.
+      enum: [department, country, level]
+
+    PayrollBreakdown:
+      type: object
+      required: [groupedBy, groups, reportingCurrency, ratesAsOf]
+      properties:
+        groupedBy:
+          $ref: '#/components/schemas/BreakdownDimension'
+        groups:
+          type: array
+          description: Largest spend first, group name as the tiebreak. Empty when nobody matches.
+          items:
+            type: object
+            required: [name, headcount, totalSpend, averageSalary]
+            properties:
+              name:
+                type: string
+                description: The department, country or level this row is for.
+                example: Engineering
+              headcount:
+                type: integer
+                format: int64
+                example: 3
+              totalSpend:
+                $ref: '#/components/schemas/Money'
+              averageSalary:
+                $ref: '#/components/schemas/Money'
+        reportingCurrency:
+          type: string
+          example: USD
+        ratesAsOf:
+          type: string
+          format: date
+          description: The date whose exchange rates every figure above was converted through.
           example: "2026-09-01"
 
     DirectoryFilterOptions:

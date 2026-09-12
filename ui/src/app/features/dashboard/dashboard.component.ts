@@ -1,13 +1,15 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 
 import { MoneyPipe } from '../../shared/money.pipe';
 import { DashboardFacade } from './dashboard.facade';
+import { BreakdownDimension } from './dashboard.model';
 
 /**
  * The four KPI cards and the filters that move them.
@@ -21,8 +23,10 @@ import { DashboardFacade } from './dashboard.facade';
   imports: [
     DatePipe,
     DecimalPipe,
+    TitleCasePipe,
     FormsModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatFormFieldModule,
     MatProgressBarModule,
     MatSelectModule,
@@ -35,6 +39,8 @@ import { DashboardFacade } from './dashboard.facade';
 })
 export class DashboardComponent implements OnInit {
   protected readonly dashboard = inject(DashboardFacade);
+
+  protected readonly dimensions: readonly BreakdownDimension[] = ['department', 'country', 'level'];
 
   protected readonly country = signal('');
   protected readonly department = signal('');
@@ -53,6 +59,16 @@ export class DashboardComponent implements OnInit {
       jobTitle: this.jobTitle(),
       level: this.level(),
     });
+  }
+
+  /** The largest group's spend, so every bar can be drawn relative to it. */
+  protected widthOf(spend: string): string {
+    const groups = this.dashboard.breakdown()?.groups ?? [];
+    const largest = Number(groups[0]?.totalSpend.amount ?? 0);
+    if (!largest) {
+      return '0%';
+    }
+    return `${Math.round((Number(spend) / largest) * 10000) / 100}%`;
   }
 
   protected clear(): void {

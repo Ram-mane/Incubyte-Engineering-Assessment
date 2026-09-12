@@ -25,3 +25,26 @@ export interface DashboardQuery {
   readonly level?: string;
   readonly currency?: string;
 }
+
+/** What a breakdown groups by. Lower case, as the API documents and returns it. */
+export type BreakdownDimension = 'department' | 'country' | 'level';
+
+export interface BreakdownGroup {
+  readonly name: string;
+  readonly headcount: number;
+  readonly totalSpend: Money;
+  readonly averageSalary: Money;
+}
+
+/**
+ * Spend per group, largest first.
+ *
+ * <p>`groups` is empty when nobody matches the filters - there is no group to name. That is a
+ * different answer from the KPI cards, which are always four cards and so read zero.
+ */
+export interface PayrollBreakdown {
+  readonly groupedBy: BreakdownDimension;
+  readonly groups: readonly BreakdownGroup[];
+  readonly reportingCurrency: string;
+  readonly ratesAsOf: string;
+}
