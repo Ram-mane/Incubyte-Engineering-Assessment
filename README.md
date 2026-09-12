@@ -182,6 +182,50 @@ row inserted during paging shifts everything after it — silently repeating one
 another, which on a payroll screen is a person who appears twice and a person who does not appear
 at all.
 
+## Known issues and what I would do next
+
+An independent QA pass walked the running application against the requirements and found these.
+The ones that mattered for correctness or for the confirmed scope are fixed and listed in the
+commit log; what follows is what it found and I chose **not** to fix before submitting, with its
+framing rather than mine.
+
+**Confusing**
+
+- **C2 — job titles are not scoped to department.** The directory's Job title filter offers every
+  title in the org regardless of the department selected, so it is possible to choose a combination
+  that matches nobody. Scoping the options to the current department is a query change and a
+  dependent-dropdown in the UI.
+- **C3 — search normalisation.** Name search is trigram-backed and case-insensitive, but does not
+  fold accents: "Muller" does not find "Müller". `unaccent` plus a functional index would fix it,
+  and would need its own `EXPLAIN` evidence because it changes which index the planner picks.
+- **C7 — money format in the change-pay dialog.** The current salary is shown as the raw decimal
+  string (`1380000.00`) next to figures that are formatted elsewhere (`₹13,80,000`). Deliberate
+  while the input was free text — the hint had to match what you would type — and now that the
+  field is a number input it could be formatted.
+- **C8 — sliding session expiry.** The JWT is short-lived with no refresh, so a long editing
+  session can expire mid-form. The expiry is handled visibly rather than silently (you are sent to
+  sign in with a reason), but the work in progress is lost.
+- **C11 — table overflow at narrow width.** The directory and dashboard tables can overflow their
+  container below roughly 700px. **Method caveat, which the reviewer stated:** this was observed by
+  resizing a desktop browser, not confirmed on a real device, so the severity is a judgement rather
+  than a measurement.
+
+**Polish (P1–P7)**
+
+- **P1** — no favicon; the browser tab shows the default.
+- **P2** — the sign-in screen has no product name or explanation above the form.
+- **P3** — dashboard KPI cards do not indicate a loading state on filter change; the figures simply
+  update when they arrive.
+- **P4** — the directory's Clear button is always enabled, including when nothing is filtered.
+- **P5** — no page title beyond the route title; the browser history reads as a list of the same
+  words.
+- **P6** — the pay-history table has no column sorting.
+- **P7** — ~~empty-result wording says "filters" even when only the search box was used~~ — fixed.
+
+**Not reproducible.** The pass listed two findings it could not reproduce (N1, N2) and explicitly
+marked them as such. I have not opened work for either. The one 30-second check N2 asked for — that
+the "Changed by" column renders for both roles — is confirmed on the deployed build.
+
 ## Engineering notes
 
 - **ArchUnit enforces the architecture.** Framework code in the domain, a port in the wrong package,

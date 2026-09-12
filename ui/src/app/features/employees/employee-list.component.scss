@@ -62,4 +62,10 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+
+  &__empty {
+    padding: 2rem 0.75rem;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.6);
+  }
 }

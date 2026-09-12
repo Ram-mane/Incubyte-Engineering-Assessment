@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { SessionService } from '../../core/auth/session.service';
-import { Employee, SalaryRevision } from '../employees/employee.model';
+import { BandView, Employee, SalaryRevision } from '../employees/employee.model';
 import { EmployeeDetailComponent } from './employee-detail.component';
 
 const alice: Employee = {
@@ -33,13 +33,28 @@ const history: SalaryRevision[] = [
   },
 ];
 
+const band: BandView = {
+  defined: true,
+  min: { amount: '1100000.00', currency: 'INR' },
+  mid: { amount: '1300000.00', currency: 'INR' },
+  max: { amount: '1560000.00', currency: 'INR' },
+  compaRatio: '1.0615',
+  position: 'WITHIN',
+};
+
 describe('EmployeeDetailComponent', () => {
   let fixture: ComponentFixture<EmployeeDetailComponent>;
   let element: HTMLElement;
   let api: jasmine.SpyObj<EmployeeApiService>;
 
-  const render = async (role: 'HR_MANAGER' | 'HR_ANALYST') => {
-    api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['byId', 'revisions', 'changeSalary']);
+  const render = async (role: 'HR_MANAGER' | 'HR_ANALYST', showing: BandView | 'failed' = band) => {
+    api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', [
+      'byId',
+      'revisions',
+      'changeSalary',
+      'band',
+    ]);
+    api.band.and.returnValue(showing === 'failed' ? throwError(() => new Error('offline')) : of(showing));
     api.byId.and.returnValue(of(alice));
     api.revisions.and.returnValue(of(history));
 
@@ -85,6 +100,48 @@ describe('EmployeeDetailComponent', () => {
     // what makes the JPA read touch the association - see docs/evidence/09-jpa-read-path.txt.
     expect(row?.textContent).toContain('hr.manager@acme.example');
     expect(row?.textContent).not.toContain('22222222-2222');
+  });
+
+  it('shows the approved range for this role and where the person sits in it', async () => {
+    await render('HR_MANAGER');
+    const section = element.querySelector('[aria-labelledby="band-heading"]');
+
+    expect(section?.textContent).toContain('1,100,000');
+    expect(section?.textContent).toContain('1,300,000');
+    expect(section?.textContent).toContain('1,560,000');
+    expect(section?.textContent).toContain('Within band');
+  });
+
+  it('says plainly when the org has no band for this role', async () => {
+    await render('HR_MANAGER', { defined: false });
+    const section = element.querySelector('[aria-labelledby="band-heading"]');
+
+    // Hiding the section would leave a reader unable to tell "no band" from "not loaded".
+    expect(section?.textContent).toContain('No band defined for this role and level');
+  });
+
+  it('reports a salary above the maximum without warning about it', async () => {
+    await render('HR_MANAGER', { ...band, compaRatio: '3.8462', position: 'ABOVE_MAX' });
+    const section = element.querySelector('[aria-labelledby="band-heading"]');
+
+    // Displayed, never enforced: it states the position and offers no alarm, no confirmation and
+    // nothing disabled. The change-pay button is exactly as available as it was.
+    expect(section?.textContent).toContain('Above band maximum');
+    expect(section?.querySelector('[role="alert"]')).toBeNull();
+    const changePay = Array.from(element.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Change pay',
+    );
+    expect(changePay).withContext('the change-pay button must still be there').toBeTruthy();
+    expect(changePay!.disabled).toBeFalse();
+  });
+
+  it('does not claim there is no band when the band request failed', async () => {
+    await render('HR_MANAGER', 'failed');
+    const section = element.querySelector('[aria-labelledby="band-heading"]');
+
+    // "No band defined" is a claim about the organisation. A failed request does not support it.
+    expect(section?.textContent).toContain('could not be loaded');
+    expect(section?.textContent).not.toContain('No band defined');
   });
 
   it('offers a manager the change-pay action', async () => {

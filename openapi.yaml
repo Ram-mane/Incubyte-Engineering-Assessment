@@ -251,6 +251,63 @@ paths:
                 items:
                   $ref: '#/components/schemas/SalaryRevision'
 
+  /bands/position:
+    post:
+      summary: The approved pay range for a role, and where a salary sits in it
+      description: |
+        Bands are **displayed, never enforced**. Nothing on any write path consults this: a pay
+        change far outside the band succeeds exactly as one inside it does, which the customer
+        confirmed and `BandsAreDisplayedNeverEnforcedIT` pins by putting a salary forty times the
+        maximum through the real use case and watching it land.
+
+        **A POST that neither creates nor changes anything.** Placing a salary in its band needs
+        the salary, and a query string is the one part of a request that reaches the access log,
+        the browser history and the `Referer` of everything the page loads next. "No salary figures
+        in log output" is a rule about where pay ends up, so the figure travels in a body. The 200
+        is the answer, not a resource.
+
+        Takes the role rather than an employee id: a band belongs to a role, at a level, in a
+        market, and reaching for an employee would make this module depend on another for nothing
+        it needs.
+
+        A role with no approved range returns `defined: false` rather than 404. That is an ordinary
+        state of the data and the screen says so; a 404 would read as a broken link.
+      operationId: bandForRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jobTitle, level, country, salary, currency]
+              properties:
+                jobTitle: { type: string, example: Software Engineer }
+                level:
+                  $ref: '#/components/schemas/SeniorityLevel'
+                country: { type: string, minLength: 2, maxLength: 2, example: IN }
+                salary:
+                  type: string
+                  description: A decimal string, like every other amount crossing this API.
+                  example: "1380000.00"
+                currency: { type: string, minLength: 3, maxLength: 3, example: INR }
+      responses:
+        "200":
+          description: The band, or a `defined` of false when the org has none for that combination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Band'
+        "400":
+          description: An unparseable level, country, currency or amount
+        "422":
+          description: |
+            The salary's currency is not the band's. `type` is
+            `https://salary-management.dev/errors/currency-mismatch`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /dashboard/summary:
     get:
       summary: The four KPI cards, in one round trip
@@ -586,6 +643,39 @@ components:
           format: date
           description: The date the figures were converted through. Absent when none was needed.
           example: "2026-09-01"
+
+    Band:
+      type: object
+      required: [defined]
+      description: |
+        The approved range for a role. Informational: nothing in the system refuses a salary for
+        being outside it.
+      properties:
+        defined:
+          type: boolean
+          description: False when the org has no band for this role, level and country.
+        min:
+          description: Null when `defined` is false.
+          allOf: [{ $ref: '#/components/schemas/Money' }]
+          nullable: true
+        mid:
+          description: Null when `defined` is false.
+          allOf: [{ $ref: '#/components/schemas/Money' }]
+          nullable: true
+        max:
+          description: Null when `defined` is false.
+          allOf: [{ $ref: '#/components/schemas/Money' }]
+          nullable: true
+        compaRatio:
+          type: string
+          nullable: true
+          description: salary / midpoint, to four places. A string, like every other figure here.
+          example: "1.0615"
+        position:
+          type: string
+          nullable: true
+          enum: [BELOW_MIN, LOW, WITHIN, HIGH, ABOVE_MAX, null]
+          description: Where the salary sits. Reported for any salary, including far outside.
 
     DirectoryFilterOptions:
       type: object

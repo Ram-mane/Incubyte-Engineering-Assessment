@@ -5,8 +5,6 @@
       @if (directory.total() > 0) {
         Showing {{ directory.firstOnPage() }}–{{ directory.lastOnPage() }} of
         {{ directory.total() | number }} employees
-      } @else if (!directory.isLoading() && !directory.hasFailed()) {
-        No employees match these filters
       }
     </p>
   </header>
@@ -115,6 +113,18 @@
 
     <tr mat-header-row *matHeaderRowDef="columns"></tr>
     <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+    <!-- In the body, where the rows would have been: a message above an empty table reads as a
+         loading state. Same placement and wording as the dashboard's empty result. -->
+    <tr class="directory__empty-row" *matNoDataRow>
+      <td [attr.colspan]="columns.length" class="directory__empty">
+        <!-- Silent while loading or after a failure: the row exists either way, and asserting
+             "nothing matched" over a request that never answered would be inventing a result. -->
+        @if (!directory.isLoading() && !directory.hasFailed()) {
+          {{ directory.emptyMessage() }}
+        }
+      </td>
+    </tr>
   </table>
 
   <nav class="directory__pager" aria-label="Directory pages">

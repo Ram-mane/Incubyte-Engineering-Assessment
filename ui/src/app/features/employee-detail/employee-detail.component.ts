@@ -13,6 +13,15 @@ import { ChangeSalaryRequest } from '../employees/employee.model';
 import { ChangeSalaryDialogComponent } from './change-salary-dialog.component';
 import { EmployeeDetailFacade } from './employee-detail.facade';
 
+/** The five positions, as a person reads them. Labels only - nothing branches on these. */
+const BAND_POSITIONS: Record<string, string> = {
+  BELOW_MIN: 'Below band minimum',
+  LOW: 'Low in band',
+  WITHIN: 'Within band',
+  HIGH: 'High in band',
+  ABOVE_MAX: 'Above band maximum',
+};
+
 /**
  * One employee, their current pay, and every change anyone has ever made to it.
  *
@@ -44,6 +53,10 @@ export class EmployeeDetailComponent implements OnInit {
   protected readonly session = inject(SessionService);
   private readonly dialogs = inject(MatDialog);
 
+  protected bandPosition(position: string | undefined): string {
+    return position ? (BAND_POSITIONS[position] ?? position) : '';
+  }
+
   protected readonly columns = ['changedAt', 'previousAmount', 'newAmount', 'reason', 'changedBy', 'note'];
 
   ngOnInit(): void {
@@ -55,13 +68,15 @@ export class EmployeeDetailComponent implements OnInit {
     if (!employee) {
       return;
     }
-    this.dialogs
-      .open(ChangeSalaryDialogComponent, { data: employee, width: '32rem' })
-      .afterClosed()
-      .subscribe((change?: ChangeSalaryRequest) => {
-        if (change) {
-          this.detail.changeSalary(this.id(), change, () => undefined);
-        }
-      });
+    // The dialog does the saving, so a refusal can be shown where the manager is looking and
+    // what they typed survives it. It closes itself once the change is accepted.
+    this.dialogs.open(ChangeSalaryDialogComponent, {
+      width: '34rem',
+      data: {
+        employee,
+        band: this.detail.band(),
+        save: (change: ChangeSalaryRequest) => this.detail.save(this.id(), change),
+      },
+    });
   }
 }

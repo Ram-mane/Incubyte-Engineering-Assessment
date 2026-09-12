@@ -108,6 +108,42 @@ describe('EmployeeListComponent', () => {
     expect(labels).toContain('Search name or email');
   });
 
+  it('puts the empty message where the rows would have been', async () => {
+    const country = element.querySelector<HTMLElement>('mat-form-field [role="combobox"]');
+    api.page.and.returnValue(of({ items: [], totalApprox: 0 }));
+    fixture.componentInstance.applyFilterForTest({ country: 'DE' });
+    fixture.detectChanges();
+
+    // An empty table with a message above it reads as a loading state. The dashboard puts its
+    // empty message where the content would be, and that is the screen this one is copying.
+    const body = element.querySelector('table tbody');
+    expect(body?.textContent).toContain('No employees match these filters');
+    expect(country).withContext('the filters stay on screen').toBeTruthy();
+  });
+
+  it('does not blame filters nobody set', async () => {
+    api.page.and.returnValue(of({ items: [], totalApprox: 0 }));
+    element.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    // Nothing was searched and nothing was filtered - the same defect P7 named, one case over.
+    const body = element.querySelector('table tbody');
+    expect(body?.textContent).toContain('No employees yet');
+  });
+
+  it('says "your search" when only the search box was used', async () => {
+    const search = element.querySelector<HTMLInputElement>('input[name="q"]')!;
+    search.value = 'nobodyhasthisname';
+    search.dispatchEvent(new Event('input'));
+    api.page.and.returnValue(of({ items: [], totalApprox: 0 }));
+    element.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    // "No employees match these filters" is confusing when no filter was touched.
+    const body = element.querySelector('table tbody');
+    expect(body?.textContent).toContain('No employees match your search');
+  });
+
   it('sends the search term to the server rather than filtering in the browser', () => {
     const search = element.querySelector<HTMLInputElement>('input[name="q"]');
     search!.value = 'kapoor';

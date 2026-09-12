@@ -54,3 +54,21 @@ export interface ChangeSalaryRequest {
   readonly reason: string;
   readonly note?: string;
 }
+
+/**
+ * The approved range for an employee's role, and where their pay sits in it.
+ *
+ * <p>`defined` is false when the org has no band for that role, level and country. That is an
+ * ordinary state of the data, and the screen says so rather than hiding the section.
+ *
+ * <p>Nothing in this application acts on `position`. It is displayed - see the change-pay dialog,
+ * which shows the band and lets the manager set whatever figure they decide on.
+ */
+export interface BandView {
+  readonly defined: boolean;
+  readonly min?: Money | null;
+  readonly mid?: Money | null;
+  readonly max?: Money | null;
+  readonly compaRatio?: string | null;
+  readonly position?: 'BELOW_MIN' | 'LOW' | 'WITHIN' | 'HIGH' | 'ABOVE_MAX' | null;
+}

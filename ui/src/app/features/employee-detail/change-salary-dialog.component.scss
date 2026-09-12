@@ -1,0 +1,45 @@
+.dialog {
+  // One column. Material's dialog content is a scroll container, and side-by-side fields inside
+  // it clipped the labels and truncated the hints - which is how a demo shows a cramped form.
+  display: flex;
+  flex-direction: column;
+  &__field {
+    width: 100%;
+
+    // Material's dialog content is a scroll container with its own padding, so the first field's
+    // floating label sits on the clip edge. Pushing the field down is what actually clears it.
+    &:first-of-type {
+      margin-top: 0.75rem;
+    }
+  }
+
+  &__band {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &__band-label {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  &__band-range {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__band-note {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  &__refusal {
+    margin: 0.25rem 0 1rem;
+    color: #b3261e;
+    font-size: 0.875rem;
+  }
+}

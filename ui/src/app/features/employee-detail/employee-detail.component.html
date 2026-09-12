@@ -33,6 +33,36 @@
       <p role="alert" class="detail__error">{{ problem }}</p>
     }
 
+    <section class="detail__band" aria-labelledby="band-heading">
+      <h2 id="band-heading">Salary band</h2>
+      @if (detail.band(); as band) {
+        @if (band.defined) {
+          <dl class="detail__range">
+            <div><dt>Minimum</dt><dd>{{ band.min | money }}</dd></div>
+            <div><dt>Midpoint</dt><dd>{{ band.mid | money }}</dd></div>
+            <div><dt>Maximum</dt><dd>{{ band.max | money }}</dd></div>
+            <div>
+              <dt>This employee</dt>
+              <dd>{{ bandPosition(band.position) }} &middot; compa-ratio {{ band.compaRatio }}</dd>
+            </div>
+          </dl>
+          <p class="detail__band-note">
+            The approved range for this role, level and country. Shown for context only - pay
+            changes are not restricted to it.
+          </p>
+        } @else {
+          <p class="detail__band-note">
+            No band defined for this role and level. Not every role has an approved range.
+          </p>
+        }
+      } @else if (detail.bandFailed()) {
+        <!-- A failed read is not an answer about the org: it must not read as "no band". -->
+        <p class="detail__band-note" role="alert">The salary band could not be loaded.</p>
+      } @else {
+        <p class="detail__band-note">Loading the approved range&hellip;</p>
+      }
+    </section>
+
     <h2>Pay history</h2>
 
     @if (detail.revisions().length === 0) {

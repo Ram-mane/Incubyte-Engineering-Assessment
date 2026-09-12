@@ -23,7 +23,13 @@ describe('EmployeeDetailFacade', () => {
   let facade: EmployeeDetailFacade;
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['byId', 'revisions', 'changeSalary']);
+    api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', [
+      'byId',
+      'revisions',
+      'changeSalary',
+      'band',
+    ]);
+    api.band.and.returnValue(of({ defined: false }));
     api.byId.and.returnValue(of(alice));
     api.revisions.and.returnValue(of([]));
     api.revisions.calls.reset();

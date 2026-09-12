@@ -55,6 +55,18 @@ final class BandPopulation {
 
     private static final BigDecimal CEILING = new BigDecimal("1.20");
 
+    /**
+     * The midpoints above are starting rates - they are the scale employees are hired onto. The
+     * seeded org then walks each person through two to four raises of four to eleven percent, so
+     * what people are actually paid today is roughly a quarter above where they started.
+     *
+     * <p>A band set at the starting rate is not wrong so much as answering a different question,
+     * and it showed: six employees in ten came out above their own maximum, which reads as a
+     * broken band rather than as a well-paid organisation. A band describes what a role pays now,
+     * so the midpoint is lifted by the same progression the population applies (D155).
+     */
+    private static final BigDecimal CAREER_PROGRESSION = new BigDecimal("1.25");
+
     private BandPopulation() {}
 
     static List<SalaryBand> all() {
@@ -71,7 +83,7 @@ final class BandPopulation {
     }
 
     private static SalaryBand bandFor(CountryCode market, JobTitle title, SeniorityLevel level) {
-        BigDecimal mid = new BigDecimal(MIDPOINTS.get(market.code()).get(level.ordinal()));
+        BigDecimal mid = new BigDecimal(MIDPOINTS.get(market.code()).get(level.ordinal())).multiply(CAREER_PROGRESSION);
         return new SalaryBand(
                 title,
                 level,

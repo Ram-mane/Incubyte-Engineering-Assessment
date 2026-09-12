@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  BandView,
   ChangeSalaryRequest,
   DirectoryQuery,
   Employee,
@@ -37,6 +38,23 @@ export class EmployeeApiService {
 
   byId(id: string): Observable<Employee> {
     return this.http.get<Employee>(`/api/v1/employees/${id}`);
+  }
+
+  /**
+   * The approved range for a role, and where this salary sits in it. Read-only: nothing acts on
+   * it. Takes the role rather than the employee, because a band belongs to a role - the server
+   * keeps the two modules apart and this call reflects that.
+   */
+  band(employee: Employee): Observable<BandView> {
+    // POST for a read: the salary is part of the question, and a query string reaches the access
+    // log, the browser history and the Referer of everything the page loads next.
+    return this.http.post<BandView>('/api/v1/bands/position', {
+      jobTitle: employee.jobTitle,
+      level: employee.level,
+      country: employee.country,
+      salary: employee.salary.amount,
+      currency: employee.salary.currency,
+    });
   }
 
   revisions(id: string): Observable<SalaryRevision[]> {

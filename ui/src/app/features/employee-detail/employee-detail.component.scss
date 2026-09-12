@@ -59,4 +59,36 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+
+  &__band {
+    margin-top: 1.5rem;
+
+    h2 {
+      font-size: 1.125rem;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  &__range {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin: 0;
+
+    dt {
+      font-size: 0.8125rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    dd {
+      margin: 0.15rem 0 0;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__band-note {
+    margin: 0.6rem 0 0;
+    font-size: 0.8125rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
 }

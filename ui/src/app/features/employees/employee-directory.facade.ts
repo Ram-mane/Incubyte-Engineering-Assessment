@@ -40,6 +40,28 @@ export class EmployeeDirectoryFacade {
   readonly filters = this.query.asReadonly();
   readonly filterOptions = this.options.asReadonly();
 
+  /**
+   * What to say about an empty result. A search with no filters is the common case and "no
+   * employees match these filters" reads as though the reader set filters they did not set.
+   */
+  readonly emptyMessage = computed(() => {
+    const query = this.filters();
+    const searched = !!query.q?.trim();
+    const filtered = !!(query.country || query.department || query.jobTitle || query.level);
+    if (!searched && !filtered) {
+      // Nothing was asked for, so nothing was excluded: telling somebody their filters matched
+      // nobody when they set none is the same defect P7 was about, one case over.
+      return 'No employees yet.';
+    }
+    if (searched && !filtered) {
+      return 'No employees match your search.';
+    }
+    if (searched) {
+      return 'No employees match your search and these filters.';
+    }
+    return 'No employees match these filters.';
+  });
+
   readonly hasNextPage = computed(() => this.nextCursor() !== undefined);
   readonly hasPreviousPage = computed(() => this.previousCursors().length > 0);
   readonly pageNumber = computed(() => this.previousCursors().length + 1);

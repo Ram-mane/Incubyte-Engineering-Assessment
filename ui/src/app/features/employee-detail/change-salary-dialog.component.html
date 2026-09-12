@@ -3,10 +3,44 @@
 <mat-dialog-content class="dialog">
   <mat-form-field appearance="outline" class="dialog__field">
     <mat-label>New annual salary ({{ employee.salary.currency }})</mat-label>
-    <input matInput name="amount" inputmode="decimal"
-           [ngModel]="amount()" (ngModelChange)="amount.set($event)" />
+    <input
+      matInput
+      name="amount"
+      type="text"
+      inputmode="decimal"
+      autocomplete="off"
+      required
+      [ngModel]="amount()"
+      (ngModelChange)="setAmount($event)"
+      [attr.aria-describedby]="problem() ? 'amount-problem' : null"
+      [attr.aria-invalid]="problem() ? 'true' : null"
+    />
     <mat-hint>Currently {{ employee.salary.amount }} {{ employee.salary.currency }}</mat-hint>
   </mat-form-field>
+
+  <!--
+    One place for both the local check and the server's refusal, tied to the field they are about.
+    Not a mat-error: Material renders those from its own control's validity, which is neither
+    invalid for "abc" in a text field nor aware of what the server said. role="alert" also means a
+    screen reader hears the message rather than only seeing it appear.
+  -->
+  @if (problem(); as message) {
+    <p id="amount-problem" class="dialog__refusal" role="alert">{{ message }}</p>
+  }
+
+  <div class="dialog__band">
+    @if (band === null) {
+      <span class="dialog__band-note">The approved range is not available.</span>
+    } @else if (band?.defined) {
+      <span class="dialog__band-label">Approved range for this role</span>
+      <span class="dialog__band-range">
+        {{ band?.min | money }} &ndash; {{ band?.max | money }} (midpoint {{ band?.mid | money }})
+      </span>
+      <span class="dialog__band-note">For context. Pay changes are not restricted to the band.</span>
+    } @else {
+      <span class="dialog__band-note">No band defined for this role and level.</span>
+    }
+  </div>
 
   <mat-form-field appearance="outline" class="dialog__field">
     <mat-label>Reason</mat-label>
@@ -27,5 +61,7 @@
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="cancel()">Cancel</button>
-  <button mat-flat-button type="button" (click)="submit()">Save change</button>
+  <button mat-flat-button type="button" name="save" [disabled]="cannotSave()" (click)="submit()">
+    Save change
+  </button>
 </mat-dialog-actions>

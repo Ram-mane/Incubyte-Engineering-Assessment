@@ -66,6 +66,12 @@ export class EmployeeListComponent implements OnInit {
     });
   }
 
+  /** Applies a filter the way the form does, for a test that needs one set. */
+  applyFilterForTest(query: { country?: string }): void {
+    this.country.set(query.country ?? '');
+    this.apply();
+  }
+
   protected clear(): void {
     this.q.set('');
     this.country.set('');
