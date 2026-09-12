@@ -18,8 +18,8 @@ export class DashboardApiService {
   summary(query: DashboardQuery): Observable<PayrollSummary> {
     let params = new HttpParams();
     for (const [name, value] of Object.entries(query)) {
-      // A cleared dropdown is an absent parameter, not `?country=`: the API reads a blank string
-      // as a filter matching nobody.
+      // A cleared dropdown is an absent parameter, not `?country=`: `new CountryCode("")` fails
+      // the value object's own guard, so a blank one returns 400 rather than an empty dashboard.
       if (value !== undefined && value !== null && value !== '') {
         params = params.set(name, value);
       }

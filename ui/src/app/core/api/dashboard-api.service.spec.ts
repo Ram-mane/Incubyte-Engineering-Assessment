@@ -41,8 +41,8 @@ describe('DashboardApiService', () => {
   it('leaves a blank filter out of the query rather than sending it empty', () => {
     api.summary({ country: 'DE', department: '', jobTitle: '', level: '' }).subscribe();
 
-    // The API reads `?department=` as a filter matching nobody, so a cleared dropdown must be an
-    // absent parameter rather than a present blank one.
+    // `?department=` is not an empty filter to this API, it is a 400 — the value objects reject a
+    // blank code — so a cleared dropdown must leave the parameter out entirely.
     const request = http.expectOne((r) => r.url === '/api/v1/dashboard/summary');
 
     expect(request.request.params.get('country')).toBe('DE');

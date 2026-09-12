@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { EmployeeApiService } from '../../core/api/employee-api.service';
-import { DirectoryFilterOptions, DirectoryQuery, Employee } from './employee.model';
+import { DirectoryFilterOptions } from '../../core/api/filter-options.model';
+import { DirectoryQuery, Employee } from './employee.model';
 
 export const DEFAULT_PAGE_SIZE = 50;
 

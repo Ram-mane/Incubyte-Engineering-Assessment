@@ -4,12 +4,12 @@ import { Observable } from 'rxjs';
 
 import {
   ChangeSalaryRequest,
-  DirectoryFilterOptions,
   DirectoryQuery,
   Employee,
   EmployeePage,
   SalaryRevision,
 } from '../../features/employees/employee.model';
+import { DirectoryFilterOptions } from './filter-options.model';
 
 /**
  * The only place the employee endpoints are named. Components reach the directory through the
@@ -22,8 +22,8 @@ export class EmployeeApiService {
   page(query: DirectoryQuery): Observable<EmployeePage> {
     let params = new HttpParams();
     for (const [name, value] of Object.entries(query)) {
-      // An empty filter is an absent parameter, not `?country=`: the API reads a blank string as
-      // a filter matching nobody.
+      // An empty filter is an absent parameter, not `?country=`: a blank value fails the API's
+      // own validation and comes back 400, so a cleared dropdown must leave the parameter out.
       if (value !== undefined && value !== null && value !== '') {
         params = params.set(name, value);
       }

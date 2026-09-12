@@ -27,13 +27,6 @@ export interface EmployeePage {
   readonly totalApprox?: number;
 }
 
-export interface DirectoryFilterOptions {
-  readonly countries: readonly string[];
-  readonly departments: readonly string[];
-  readonly jobTitles: readonly string[];
-  readonly levels: readonly string[];
-}
-
 /** What the screen asks for. Every field optional: the unfiltered first page sets none of them. */
 export interface DirectoryQuery {
   readonly q?: string;
