@@ -66,7 +66,7 @@ graph LR
     end
     IDN["identity<br/><i>auth, users, roles</i>"]
     SHR["shared-kernel<br/><i>Money, CountryCode, ExchangeRate</i>"]
-    PERS["adapter.out.persistence<br/><i>JPA + jOOQ-style native reads</i>"]
+    PERS["adapter.out.persistence<br/><i>JdbcTemplate: projections and explicit writes</i>"]
 
     WEB --> EMP & COMP & BAND & ANA & IMP
     COMP --> EMP
@@ -106,7 +106,7 @@ com.acme.salarymanagement
 │   │   └── service/              # implementations
 │   └── adapter/
 │       ├── in/web/               # EmployeeController, request/response records
-│       └── out/persistence/      # EmployeeJpaEntity, EmployeeRepositoryAdapter, Spring Data iface
+│       └── out/persistence/      # EmployeeJdbcAdapter, EmployeeDirectoryJdbcAdapter (projections)
 ├── compensation/                 # salary change use case + append-only revision log
 ├── band/
 ├── analytics/                    # read-only dashboard; native SQL projections, no entities
@@ -157,15 +157,28 @@ it, so the audit guarantee is a property of the domain object, not of rememberin
 
 ## 7. Read model vs write model
 
-Writes go through JPA entities and the domain. **Analytics reads bypass JPA entirely** and use
-hand-written native SQL returning flat projection records.
+**Every adapter uses `JdbcTemplate`. There are no JPA entities.** Reads return flat projection
+records of exactly the columns a screen shows; writes are explicit statements inside one
+transaction.
 
-Reason: the KPI cards aggregate 10,000 employee rows across six currencies with FX conversion, and
-the distribution charts need `percentile_cont`. That is a SQL problem, not an object-graph problem.
-Loading entities to sum them in Java is the single most common performance mistake in Spring
-applications, and Incubyte's point 10 asks specifically to see JPA query performance handled well.
-This is a deliberate, documented CQRS-lite split — [ADR-0005](adr/0005-native-sql-for-analytics.md) —
-not an accident.
+Reads are SQL for the reason ADR-0005 gave and it still holds: the KPI cards aggregate 10,000 rows
+across six currencies with FX conversion and the distributions need `percentile_cont`, which is a
+SQL problem rather than an object-graph problem. Loading entities to sum them in Java is the single
+most common performance mistake in Spring applications.
+
+Writes are explicit statements for a different and stronger reason: **dirty checking is an ambient
+write path**. A managed `Employee` whose salary changed flushes an `UPDATE` at commit with no
+`SalaryRevision`, and neither the ArchUnit rule nor the append-only grant can see it — the rule
+forbids constructing a revision outside the domain, not omitting one, and the grant restricts
+`salary_revision` while the application legitimately holds `UPDATE` on `employee`. The absent
+setter, the returned revision and the restricted role all exist to make an unrecorded pay change
+impossible to express; an ORM that writes fields because they changed would make it the default.
+
+[ADR-0014](adr/0014-jdbctemplate-everywhere-jpa-on-a-read-path.md) records this and supersedes the
+write half of [ADR-0005](adr/0005-native-sql-for-analytics.md). The JPA query-performance criterion
+the brief asks for is met on a **read** path after the dashboard ships: one mapped read, written to
+produce an N+1, caught by the statement-count harness and fixed with an entity graph, with the
+before and after counts committed as evidence.
 
 ## 8. Frontend architecture (Angular 19)
 
