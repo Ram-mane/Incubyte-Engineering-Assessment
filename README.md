@@ -188,8 +188,11 @@ at all.
   or a cycle between modules fails the build. The diagram and the code cannot drift.
 - **PostgreSQL enforces the audit guarantee.** The application role holds `INSERT` and `SELECT` on
   `salary_revision` and nothing else, so the log is append-only independent of application code.
-- **Mutation testing, not coverage theatre.** Pitest at 70% on the domain — tests are proven to
-  detect defects, not merely to execute lines.
+- **Mutation testing, not coverage theatre.** Pitest over `shared`, `domain` and `application`
+  against a 70% threshold; the build currently kills **178 of 201 mutations (89%)**, test strength
+  96%. Tests are proven to detect defects, not merely to execute lines — and
+  [what the score cannot see](docs/07-TEST-STRATEGY.md) is written down beside it, because a
+  mutation score is bounded by what the tool elects to mutate.
 - **The dashboard aggregates in SQL.** Four KPI cards in one round trip, `percentile_cont` for the
   distributions, no entity ever loaded to be summed in Java. Integration tests assert the query
   plans use indexes — including that name search uses the trigram index rather than a sequential

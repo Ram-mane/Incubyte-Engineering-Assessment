@@ -63,8 +63,9 @@ database password. Neither is in the repository, but both are in a log.
 `compensation` and `bulkimport` do not, and `compensation` may never — D111 records why the
 change-salary use case lives in `employee`. `analytics` now exists, so only two are missing.
 
-**6. The mutation gate has not run since Day 1.** `mvn -Pmutation test`, threshold 70% on domain.
-The domain has gained `Department` and `requirePositive` and lost `Money.convertTo` since.
+**6. ~~The mutation gate has not run since Day 1.~~ Cleared.** Re-run over the changed domain:
+**178 of 201 killed, 89%**, test strength 96%, against a 70% threshold. The README quoted the
+threshold as though it were the score and now quotes the measurement (**D138**).
 
 **7. Domain rejections still return 400 where the API doc says 422/409** (D112).
 
