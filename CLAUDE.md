@@ -91,8 +91,10 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 mvn spring-boot:run -Dspring-boot.run.profiles=seed   # 10k employees, ~30k revisions
 docker compose up -d postgres
 cd ui && npm start / npm test / npm run e2e
-k6 run perf/k6/directory-browse.js
-k6 run perf/k6/dashboard.js
+# NOT BUILT YET - perf/k6/ does not exist. The load tests are PLAN 3.11; until they land the
+# only performance evidence is the hand-captured query plans in docs/evidence/.
+# k6 run perf/k6/directory-browse.js
+# k6 run perf/k6/dashboard.js
 ```
 
 ## Where things live
@@ -109,7 +111,8 @@ src/main/resources/db/migration/    Flyway, forward-only
 src/test/java/.../architecture/     ArchUnit rules
 ui/src/app/{core,shared,features}/
 docs/                               requirements, ADRs, perf reports
-perf/k6/
+docs/evidence/                      EXPLAIN plans, captured by hand with and without each index
+perf/k6/                            NOT BUILT YET - PLAN 3.11
 ```
 
 ## Style
