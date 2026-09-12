@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +18,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalary;
 import com.acme.salarymanagement.employee.application.port.in.ChangeSalaryCommand;
-import com.acme.salarymanagement.employee.application.port.in.SalaryRevisionView;
 import com.acme.salarymanagement.employee.application.port.out.SalaryRevisionLog;
 import com.acme.salarymanagement.employee.domain.ChangeReason;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
@@ -140,11 +138,6 @@ class ChangeSalaryIsAllOrNothingIT extends PostgresIntegrationTest {
                             "INSERT INTO salary_revision (id, employee_id) VALUES (?, ?)",
                             UUID.randomUUID(),
                             revision.employeeId().value());
-                }
-
-                @Override
-                public List<SalaryRevisionView> of(EmployeeId employeeId, int limit) {
-                    return List.of();
                 }
             };
         }

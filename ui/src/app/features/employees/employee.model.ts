@@ -43,6 +43,7 @@ export interface SalaryRevision {
   readonly newAmount: Money;
   readonly reason: string;
   readonly changedBy: string;
+  readonly changedByEmail: string;
   readonly changedAt: string;
   readonly note?: string;
 }

@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.acme.salarymanagement.employee.application.port.in.GetSalaryRevisions;
 import com.acme.salarymanagement.employee.application.port.in.SalaryRevisionView;
-import com.acme.salarymanagement.employee.application.port.out.SalaryRevisionLog;
+import com.acme.salarymanagement.employee.application.port.out.SalaryRevisionReader;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
 
 @Service
@@ -18,9 +18,9 @@ class GetSalaryRevisionsService implements GetSalaryRevisions {
 
     private static final int SHORTEST_LOG = 1;
 
-    private final SalaryRevisionLog revisions;
+    private final SalaryRevisionReader revisions;
 
-    GetSalaryRevisionsService(SalaryRevisionLog revisions) {
+    GetSalaryRevisionsService(SalaryRevisionReader revisions) {
         this.revisions = revisions;
     }
 

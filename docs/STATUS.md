@@ -100,8 +100,8 @@ Load-bearing for tomorrow:
 shared filter set across the dashboard endpoints and 3.9 is the screen — the number was wrong, the
 work described was right.
 
-Then the optimistic-locking fix, then the JPA read-path slice, then Playwright, README, k6 and the
-video.
+The optimistic-locking fix and the JPA read-path slice are both done. Remaining: Playwright,
+README, k6 and the video.
 
 **The video gets 45 minutes tomorrow morning, with the API warmed first.**
 

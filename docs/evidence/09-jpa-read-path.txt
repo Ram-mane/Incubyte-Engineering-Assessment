@@ -1,0 +1,81 @@
+================================================================================
+09 - JPA read path: the N+1, measured and fixed
+================================================================================
+
+ADR-0014 scheduled one mapped READ path once the dashboard shipped, written so it
+produces an N+1, caught by the statement-count harness, fixed with an entity graph.
+This is that slice. No write path moved to JPA and none will - see ADR-0014.
+
+The read: GET /api/v1/employees/{id}/salary-revisions, which renders who made each
+change. Entities: SalaryRevisionEntity with a LAZY @ManyToOne to AppUserEntity.
+
+Harness: support/CountingDataSource, the same one the rest of the suite uses. It
+wraps the application's pool and counts every execute at the JDBC boundary, so these
+are statements actually sent, not statements Hibernate logged.
+
+--------------------------------------------------------------------------------
+BEFORE - findByEmployeeIdOrderByChangedAtDesc, association left lazy
+--------------------------------------------------------------------------------
+
+  31 statements for a 30-entry log, 30 distinct managers.
+
+  1  select ... from salary_revision where employee_id=? order by changed_at desc
+  2  select ... from app_user where id=?      <- revision 1's author
+  3  select ... from app_user where id=?      <- revision 2's author
+  ...                                            (one per row)
+ 31  select ... from app_user where id=?      <- revision 30's author
+
+  The extra selects fire when the view reads changedByEmail. A lazy association
+  nobody touches costs nothing, which is exactly why this survives review until a
+  screen renders the field.
+
+--------------------------------------------------------------------------------
+AFTER - @EntityGraph(attributePaths = "changedBy")
+--------------------------------------------------------------------------------
+
+  1 statement, whatever the row count:
+
+  select r.*, u.* from salary_revision r
+    left join app_user u on u.id = r.changed_by
+   where r.employee_id = ?
+   order by r.changed_at desc
+   fetch first ? rows only
+
+--------------------------------------------------------------------------------
+THE MEASUREMENT THAT CHANGED THE TEST
+--------------------------------------------------------------------------------
+
+The first version of this fixture gave every revision the SAME manager, and the
+naive read cost 2 statements, not 31. Hibernate loads that user once and the
+persistence context answers the other 29.
+
+  same manager on all 30 rows  ->  2 statements
+  30 distinct managers          -> 31 statements
+  entity graph, either way      ->  1 statement
+
+So the cost scales with how many DISTINCT associated rows appear, not with how many
+rows are read. An N+1 measured against a fixture with one author looks like a
+constant and ships. All three numbers are asserted in JpaReadPathStatementCountIT.
+
+--------------------------------------------------------------------------------
+RAW OUTPUT
+--------------------------------------------------------------------------------
+
+[INFO] Running com.acme.salarymanagement.employee.adapter.out.persistence.jpa.JpaReadPathStatementCountIT
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 23.33 s -- in com.acme.salarymanagement.employee.adapter.out.persistence.jpa.JpaReadPathStatementCountIT
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running com.acme.salarymanagement.employee.adapter.out.persistence.jpa.JpaReadPathStatementCountIT
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 27.72 s -- in com.acme.salarymanagement.employee.adapter.out.persistence.jpa.JpaReadPathStatementCountIT
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+Test methods, all green:
+  a_repeated_author_hides_the_problem_behind_the_first_level_cache  (asserts 2)
+  the_obvious_mapping_costs_one_statement_per_revision              (asserts 31)
+  the_entity_graph_makes_it_one                                     (asserts 1)
+  both_readings_return_the_same_history
+  the_log_comes_back_newest_first
+
+Captured 2026-09-12 13:28 UTC against PostgreSQL 16 (Testcontainers),
+Hibernate 6 via spring-boot 3.3, ddl-auto: validate ON - the schema was not changed
+to suit Hibernate. currency_code is char(3) and maps with columnDefinition=bpchar.

@@ -456,6 +456,13 @@ components:
         changedBy:
           type: string
           format: uuid
+        changedByEmail:
+          type: string
+          format: email
+          description: |
+            Who made the change, for a person to read. The id answers "which user"; a UUID on
+            screen answers nobody's question about who raised this salary.
+          example: hr.manager@acme.example
         changedAt:
           type: string
           format: date-time

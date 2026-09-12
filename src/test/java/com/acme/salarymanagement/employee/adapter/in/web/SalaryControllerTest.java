@@ -220,6 +220,7 @@ class SalaryControllerTest {
                     Money.of(new BigDecimal(current), INR),
                     ChangeReason.MERIT,
                     new UserId(ACTOR),
+                    "hr.manager@acme.example",
                     at,
                     "Annual merit review");
         }

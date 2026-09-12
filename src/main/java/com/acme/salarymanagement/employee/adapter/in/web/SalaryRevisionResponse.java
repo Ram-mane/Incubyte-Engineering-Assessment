@@ -11,6 +11,7 @@ record SalaryRevisionResponse(
         EmployeeResponse.MoneyResponse newAmount,
         String reason,
         UUID changedBy,
+        String changedByEmail,
         Instant changedAt,
         String note) {
 
@@ -24,6 +25,7 @@ record SalaryRevisionResponse(
                         revision.newAmount().currency().code()),
                 revision.reason().name(),
                 revision.changedBy().value(),
+                revision.changedByEmail(),
                 revision.changedAt(),
                 revision.note());
     }

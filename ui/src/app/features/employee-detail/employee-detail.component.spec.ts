@@ -27,6 +27,7 @@ const history: SalaryRevision[] = [
     newAmount: { amount: '1380000.00', currency: 'INR' },
     reason: 'MERIT',
     changedBy: '22222222-2222-2222-2222-222222222222',
+    changedByEmail: 'hr.manager@acme.example',
     changedAt: '2026-09-11T09:15:30Z',
     note: 'Annual merit review',
   },
@@ -73,6 +74,17 @@ describe('EmployeeDetailComponent', () => {
     expect(rows[0].textContent).toContain('1,200,000');
     expect(rows[0].textContent).toContain('1,380,000');
     expect(rows[0].textContent).toContain('MERIT');
+  });
+
+  it('says who made each change, by name rather than by id', async () => {
+    await render('HR_MANAGER');
+
+    const row = element.querySelector('table tbody tr');
+
+    // "Who raised this salary" is not a question a UUID answers. Rendering the email is also
+    // what makes the JPA read touch the association - see docs/evidence/09-jpa-read-path.txt.
+    expect(row?.textContent).toContain('hr.manager@acme.example');
+    expect(row?.textContent).not.toContain('22222222-2222');
   });
 
   it('offers a manager the change-pay action', async () => {

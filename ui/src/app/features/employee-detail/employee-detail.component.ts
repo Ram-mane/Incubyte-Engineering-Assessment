@@ -44,7 +44,7 @@ export class EmployeeDetailComponent implements OnInit {
   protected readonly session = inject(SessionService);
   private readonly dialogs = inject(MatDialog);
 
-  protected readonly columns = ['changedAt', 'previousAmount', 'newAmount', 'reason', 'note'];
+  protected readonly columns = ['changedAt', 'previousAmount', 'newAmount', 'reason', 'changedBy', 'note'];
 
   ngOnInit(): void {
     this.detail.load(this.id());
