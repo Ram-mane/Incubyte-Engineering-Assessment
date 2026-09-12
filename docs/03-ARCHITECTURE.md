@@ -162,9 +162,10 @@ records of exactly the columns a screen shows; writes are explicit statements in
 transaction.
 
 Reads are SQL for the reason ADR-0005 gave and it still holds: the KPI cards aggregate 10,000 rows
-across six currencies with FX conversion and the distributions need `percentile_cont`, which is a
-SQL problem rather than an object-graph problem. Loading entities to sum them in Java is the single
-most common performance mistake in Spring applications.
+across six currencies with FX conversion and the distributions need `percentile_disc` — `_disc` and
+not `_cont` wherever the value is money, because interpolating leaves `numeric` for
+`double precision` (D135) — which is a SQL problem rather than an object-graph problem. Loading
+entities to sum them in Java is the single most common performance mistake in Spring applications.
 
 Writes are explicit statements for a different and stronger reason: **dirty checking is an ambient
 write path**. A managed `Employee` whose salary changed flushes an `UPDATE` at commit with no

@@ -193,10 +193,11 @@ at all.
   96%. Tests are proven to detect defects, not merely to execute lines — and
   [what the score cannot see](docs/07-TEST-STRATEGY.md) is written down beside it, because a
   mutation score is bounded by what the tool elects to mutate.
-- **The dashboard aggregates in SQL.** Four KPI cards in one round trip, `percentile_cont` for the
-  distributions, no entity ever loaded to be summed in Java. Integration tests assert the query
-  plans use indexes — including that name search uses the trigram index rather than a sequential
-  scan that only looks fast at 10,000 rows.
+- **The dashboard aggregates in SQL.** Four KPI cards in one round trip, `percentile_disc` for the
+  medians and distributions (`_cont` interpolates and leaves `numeric` — see above), no entity ever
+  loaded to be summed in Java. Integration tests assert the query plans use indexes — including
+  that name search uses the trigram index rather than a sequential scan that only looks fast at
+  10,000 rows.
 - **Keyset pagination throughout.** Constant-time at any depth, stable under concurrent writes.
 - **`Clock` injected everywhere.** No `now()` in domain or application code, so audit timestamps and
   FX rate selection are fully testable and the suite is deterministic.
