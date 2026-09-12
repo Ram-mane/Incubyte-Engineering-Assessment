@@ -1,0 +1,91 @@
+-- 3.2 KPI summary: four cards in one round trip, 10,000 employees, six currencies
+-- captured 2026-09-12T06:32:21Z
+
+== the query as the adapter issues it, unfiltered ==
+                                                                                   QUERY PLAN                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=484.18..484.19 rows=1 width=104) (actual time=11.205..11.208 rows=1 loops=1)
+   Buffers: shared hit=206
+   InitPlan 2 (returns $1)
+     ->  Result  (cost=4.17..4.18 rows=1 width=4) (actual time=0.039..0.041 rows=1 loops=1)
+           Buffers: shared hit=2
+           InitPlan 1 (returns $0)
+             ->  Limit  (cost=0.15..4.17 rows=1 width=4) (actual time=0.038..0.039 rows=1 loops=1)
+                   Buffers: shared hit=2
+                   ->  Index Only Scan Backward using ix_fx_lookup on exchange_rate exchange_rate_1  (cost=0.15..20.25 rows=5 width=4) (actual time=0.037..0.037 rows=1 loops=1)
+                         Index Cond: ((to_currency = 'USD'::bpchar) AND (as_of IS NOT NULL))
+                         Heap Fetches: 1
+                         Buffers: shared hit=2
+   ->  Hash Left Join  (cost=8.18..354.99 rows=10000 width=28) (actual time=0.105..4.476 rows=10000 loops=1)
+         Hash Cond: (e.salary_currency = exchange_rate.from_currency)
+         Buffers: shared hit=199
+         ->  Seq Scan on employee e  (cost=0.00..320.00 rows=10000 width=12) (actual time=0.006..2.329 rows=10000 loops=1)
+               Filter: ((status)::text = 'ACTIVE'::text)
+               Buffers: shared hit=195
+         ->  Hash  (cost=8.17..8.17 rows=1 width=36) (actual time=0.081..0.081 rows=5 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 9kB
+               Buffers: shared hit=4
+               ->  Index Scan using ix_fx_lookup on exchange_rate  (cost=0.15..8.17 rows=1 width=36) (actual time=0.065..0.067 rows=5 loops=1)
+                     Index Cond: ((to_currency = 'USD'::bpchar) AND (as_of = $1))
+                     Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=387 read=1
+ Planning Time: 4.104 ms
+ Execution Time: 11.425 ms
+(28 rows)
+
+
+== filtered by country and department ==
+                                                                                   QUERY PLAN                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=27.39..27.40 rows=1 width=104) (actual time=0.413..0.414 rows=1 loops=1)
+   Buffers: shared hit=15
+   InitPlan 2 (returns $1)
+     ->  Result  (cost=4.17..4.18 rows=1 width=4) (actual time=0.024..0.025 rows=1 loops=1)
+           Buffers: shared hit=2
+           InitPlan 1 (returns $0)
+             ->  Limit  (cost=0.15..4.17 rows=1 width=4) (actual time=0.023..0.023 rows=1 loops=1)
+                   Buffers: shared hit=2
+                   ->  Index Only Scan Backward using ix_fx_lookup on exchange_rate exchange_rate_1  (cost=0.15..20.25 rows=5 width=4) (actual time=0.022..0.022 rows=1 loops=1)
+                         Index Cond: ((to_currency = 'USD'::bpchar) AND (as_of IS NOT NULL))
+                         Heap Fetches: 1
+                         Buffers: shared hit=2
+   ->  Nested Loop Left Join  (cost=0.45..20.56 rows=211 width=28) (actual time=0.104..0.201 rows=214 loops=1)
+         Buffers: shared hit=8
+         ->  Index Only Scan using ix_employee_rollup on employee e  (cost=0.29..12.50 rows=211 width=12) (actual time=0.062..0.093 rows=214 loops=1)
+               Index Cond: ((department = 'Engineering'::text) AND (country_code = 'DE'::bpchar))
+               Heap Fetches: 0
+               Buffers: shared hit=4
+         ->  Memoize  (cost=0.16..0.41 rows=1 width=36) (actual time=0.000..0.000 rows=1 loops=214)
+               Cache Key: e.salary_currency
+               Cache Mode: logical
+               Hits: 213  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+               Buffers: shared hit=4
+               ->  Index Scan using ix_fx_lookup on exchange_rate  (cost=0.15..0.40 rows=1 width=36) (actual time=0.012..0.012 rows=1 loops=1)
+                     Index Cond: ((to_currency = 'USD'::bpchar) AND (as_of = $1) AND (from_currency = e.salary_currency))
+                     Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=391
+ Planning Time: 3.959 ms
+ Execution Time: 0.558 ms
+(30 rows)
+
+
+== why percentile_disc and not percentile_cont ==
+   cont_returns   | disc_returns 
+------------------+--------------
+ double precision | numeric
+(1 row)
+
+ cont_median_a_float |  disc_median_exact  
+---------------------+---------------------
+  113930.00993500001 | 113923.942020000000
+(1 row)
+
+
+== ADR-0013: does per-row conversion drift from sum-then-convert in SQL? ==
+         per_row         |    sum_then_convert     |     drift      
+-------------------------+-------------------------+----------------
+ 1213179157.200437000000 | 1213179157.200437000000 | 0.000000000000
+(1 row)
+

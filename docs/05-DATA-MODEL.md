@@ -162,7 +162,7 @@ WITH normalised AS (
 SELECT count(*)                                            AS headcount,
        sum(usd_amount)                                     AS total_spend,
        avg(usd_amount)                                     AS average,
-       percentile_cont(0.5) WITHIN GROUP (ORDER BY usd_amount) AS median
+       percentile_disc(0.5) WITHIN GROUP (ORDER BY usd_amount) AS median
 FROM   normalised;
 ```
 
@@ -170,7 +170,13 @@ Four KPI cards, one round trip. Computing these in Java would mean pulling 10,00
 to add them up — the single most common performance mistake in Spring applications, and the one
 Incubyte's point 10 is asking to see avoided.
 
-**Distribution by role** — `percentile_cont` for p25/p50/p75/p90 grouped by job title.
+**Distribution by role** — `percentile_disc` for p25/p50/p75/p90 grouped by job title.
+
+`percentile_disc`, not `percentile_cont`, wherever the value is money. `percentile_cont`
+interpolates, so PostgreSQL returns it as `double precision`: against the seeded data it gives
+`113930.00993500001`, a float artefact in a payroll figure, which this codebase forbids outright.
+`percentile_disc` stays in `numeric` and returns an amount somebody is actually paid — for a median
+salary, the more truthful answer as well as the exact one (D135).
 
 **Band position** — `employee JOIN salary_band` on (title, level, country), returning
 `salary_amount / mid_amount` as a sortable column.

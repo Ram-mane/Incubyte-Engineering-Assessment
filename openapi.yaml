@@ -236,6 +236,39 @@ paths:
                 items:
                   $ref: '#/components/schemas/SalaryRevision'
 
+  /dashboard/summary:
+    get:
+      summary: The four KPI cards, in one round trip
+      description: |
+        Headcount, total payroll spend, average and median salary for everyone matching the
+        filters, normalised to one reporting currency through the seeded FX table.
+
+        One query, not four. Four cards driven by four round trips look fine in a demo and stutter
+        on every filter change - and worse, four queries see four slightly different databases, so
+        a median can fail to belong to the headcount printed above it.
+
+        The median is `percentile_disc`: an amount somebody is actually paid. `percentile_cont`
+        interpolates and PostgreSQL returns it as `double precision`, which is a float in a payroll
+        figure.
+      operationId: payrollSummary
+      parameters:
+        - { name: country, in: query, required: false, schema: { type: string, minLength: 2, maxLength: 2 } }
+        - { name: department, in: query, required: false, schema: { type: string } }
+        - { name: jobTitle, in: query, required: false, schema: { type: string } }
+        - { name: level, in: query, required: false, schema: { $ref: '#/components/schemas/SeniorityLevel' } }
+        - name: currency
+          in: query
+          required: false
+          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          schema: { type: string, minLength: 3, maxLength: 3, default: USD }
+      responses:
+        "200":
+          description: The four cards
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollSummary'
+
   /employees/filter-options:
     get:
       summary: What there is to filter the directory by
@@ -311,6 +344,32 @@ components:
     ChangeReason:
       type: string
       enum: [MERIT, PROMOTION, MARKET_ADJUSTMENT, CORRECTION]
+
+    PayrollSummary:
+      type: object
+      required: [headcount, totalSpend, averageSalary, medianSalary, reportingCurrency, ratesAsOf]
+      properties:
+        headcount:
+          type: integer
+          format: int64
+          example: 10000
+        totalSpend:
+          $ref: '#/components/schemas/Money'
+        averageSalary:
+          $ref: '#/components/schemas/Money'
+        medianSalary:
+          $ref: '#/components/schemas/Money'
+        reportingCurrency:
+          type: string
+          example: USD
+        ratesAsOf:
+          type: string
+          format: date
+          description: |
+            The date whose exchange rates every figure above was converted through. Reported rather
+            than assumed: a total normalised through "whatever rate was current" is a number nobody
+            can reproduce next week.
+          example: "2026-09-01"
 
     DirectoryFilterOptions:
       type: object
