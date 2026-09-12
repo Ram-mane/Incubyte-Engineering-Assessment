@@ -1,0 +1,99 @@
+<section class="dashboard">
+  <header class="dashboard__header">
+    <h1>Compensation dashboard</h1>
+    @if (dashboard.summary(); as summary) {
+      <p class="dashboard__basis">
+        Normalised to {{ summary.reportingCurrency }} at exchange rates of
+        {{ summary.ratesAsOf | date: 'mediumDate' }}
+      </p>
+    }
+  </header>
+
+  <form class="dashboard__filters" (ngSubmit)="apply()">
+    <mat-form-field appearance="outline">
+      <mat-label>Country</mat-label>
+      <mat-select [ngModel]="country()" (ngModelChange)="country.set($event)" name="country">
+        <mat-option value="">Any country</mat-option>
+        @for (option of dashboard.filterOptions().countries; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Department</mat-label>
+      <mat-select [ngModel]="department()" (ngModelChange)="department.set($event)" name="department">
+        <mat-option value="">Any department</mat-option>
+        @for (option of dashboard.filterOptions().departments; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Job title</mat-label>
+      <mat-select [ngModel]="jobTitle()" (ngModelChange)="jobTitle.set($event)" name="jobTitle">
+        <mat-option value="">Any job title</mat-option>
+        @for (option of dashboard.filterOptions().jobTitles; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Level</mat-label>
+      <mat-select [ngModel]="level()" (ngModelChange)="level.set($event)" name="level">
+        <mat-option value="">Any level</mat-option>
+        @for (option of dashboard.filterOptions().levels; track option) {
+          <mat-option [value]="option">{{ option }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="dashboard__actions">
+      <button mat-flat-button type="submit" name="apply">Apply</button>
+      <button mat-button type="button" name="clear" (click)="clear()">Clear</button>
+    </div>
+  </form>
+
+  @if (dashboard.isLoading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading the dashboard" />
+  }
+
+  @if (dashboard.hasFailed()) {
+    <p role="alert" class="dashboard__error">
+      The dashboard could not be loaded. The server may be starting up.
+    </p>
+  }
+
+  @if (dashboard.summary(); as summary) {
+    <div class="dashboard__cards" aria-live="polite">
+      <article class="dashboard__card">
+        <h2 id="kpi-total-spend">Total payroll spend</h2>
+        <p class="dashboard__figure" aria-labelledby="kpi-total-spend">{{ summary.totalSpend | money }}</p>
+      </article>
+
+      <article class="dashboard__card">
+        <h2 id="kpi-headcount">Active headcount</h2>
+        <p class="dashboard__figure" aria-labelledby="kpi-headcount">{{ summary.headcount | number }}</p>
+      </article>
+
+      <article class="dashboard__card">
+        <h2 id="kpi-average-salary">Average salary</h2>
+        <p class="dashboard__figure" aria-labelledby="kpi-average-salary">{{ summary.averageSalary | money }}</p>
+      </article>
+
+      <article class="dashboard__card">
+        <h2 id="kpi-median-salary">Median salary</h2>
+        <p class="dashboard__figure" aria-labelledby="kpi-median-salary">{{ summary.medianSalary | money }}</p>
+      </article>
+    </div>
+
+    @if (dashboard.isEmpty()) {
+      <p class="dashboard__empty">
+        No employees match these filters. The cards above read zero because nobody was counted, not
+        because nothing loaded.
+      </p>
+    }
+  }
+</section>

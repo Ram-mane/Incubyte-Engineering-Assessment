@@ -11,3 +11,14 @@
   opacity: 0.85;
   margin-right: 0.5rem;
 }
+
+.app-toolbar__nav {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 1.5rem;
+}
+
+.app-toolbar__link--active {
+  // The active screen is named twice over: underlined here and in the page's own heading.
+  text-decoration: underline;
+}

@@ -40,7 +40,7 @@ export class LoginComponent {
       next: (session) => {
         this.session.start(session);
         this.busy.set(false);
-        this.router.navigate(['/employees']);
+        this.router.navigate(['/dashboard']);
       },
       error: () => {
         // One message for a wrong password and an unknown address, matching the API: telling

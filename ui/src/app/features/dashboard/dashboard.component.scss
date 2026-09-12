@@ -1,0 +1,76 @@
+.dashboard {
+  padding: 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__basis {
+    color: rgba(0, 0, 0, 0.6);
+    margin: 0;
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin: 0.5rem 0 0.25rem;
+
+    mat-form-field {
+      flex: 1 1 12rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    // Material form fields reserve space for a hint line; this lifts the buttons onto the same
+    // baseline as the controls rather than the space beneath them.
+    margin-bottom: 1.25rem;
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+
+  &__card {
+    padding: 1.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 0.75rem;
+    background: #fff;
+
+    h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.6);
+      letter-spacing: 0.02em;
+    }
+  }
+
+  &__figure {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 500;
+    // Payroll figures are long; tabular digits keep four cards from jittering as they change.
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__empty {
+    margin-top: 1rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  &__error {
+    color: #b3261e;
+  }
+}

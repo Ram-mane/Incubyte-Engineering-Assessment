@@ -3,7 +3,14 @@ import { Routes } from '@angular/router';
 import { signedInGuard } from './core/auth/signed-in.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'employees' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  {
+    path: 'dashboard',
+    title: 'Compensation dashboard',
+    canActivate: [signedInGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+  },
   {
     path: 'login',
     title: 'Sign in',

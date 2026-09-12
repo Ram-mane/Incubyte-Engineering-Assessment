@@ -40,9 +40,9 @@ _(none — working tree clean)_
 
 ## Blockers
 
-**1. The dashboard has no screen.** This is the single most important item and it is the last thing
-standing between the build and a complete submission. The query works, is measured, and is covered
-by eight integration tests; there is no Angular feature reading it.
+**1. ~~The dashboard has no screen.~~ Cleared.** PLAN 3.9 landed: four KPI cards and the four
+filters, one round trip per filter change, 23 new Angular specs. The breakdown and distribution
+(3.3, 3.4) are still to come.
 
 **2. Two concurrent pay changes both succeed.** There is no optimistic locking on the employee
 `UPDATE`, so two managers changing the same salary at once each write a revision, both carrying the
@@ -90,12 +90,14 @@ Load-bearing for tomorrow:
 
 ## Next action
 
-`PLAN.md` task 3.6 — the dashboard screen: four KPI cards and the four filters, wired to
-`GET /api/v1/dashboard/summary`, in the same standalone / OnPush / signals / facade pattern as the
-directory, with specs queried through headings and aria-labels.
+`PLAN.md` tasks 3.3 and 3.4 — the breakdown by dimension and the distribution by role.
 
-Then 3.3 and 3.4 (breakdown and distribution), then the optimistic-locking fix, then the JPA
-read-path slice, then Playwright, README, k6 and the video.
+3.9 (the dashboard screen) is done. The previous status file called it "task 3.6"; 3.6 is the
+shared filter set across the dashboard endpoints and 3.9 is the screen — the number was wrong, the
+work described was right.
+
+Then the optimistic-locking fix, then the JPA read-path slice, then Playwright, README, k6 and the
+video.
 
 **The video gets 45 minutes tomorrow morning, with the API warmed first.**
 

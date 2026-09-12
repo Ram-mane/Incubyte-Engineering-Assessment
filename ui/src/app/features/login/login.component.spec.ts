@@ -45,7 +45,7 @@ describe('LoginComponent', () => {
     expect(element.querySelector('[role="status"]')?.textContent).toContain('session expired');
   });
 
-  it('starts a session and goes to the directory when the credentials are good', async () => {
+  it('starts a session and goes to the dashboard when the credentials are good', async () => {
     await render();
     auth.login.and.returnValue(
       of({ token: 'a-token', expiresAt: '2099-01-01T00:00:00Z', role: 'HR_MANAGER' as const }),
@@ -55,7 +55,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     expect(TestBed.inject(SessionService).isSignedIn()).toBeTrue();
-    expect(router.navigate).toHaveBeenCalledWith(['/employees']);
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
   it('gives one message for a wrong password and an unknown address alike', async () => {
