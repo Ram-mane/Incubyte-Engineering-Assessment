@@ -29,16 +29,19 @@
   }
 
   <div class="dialog__band">
-    @if (band === null) {
-      <span class="dialog__band-note">The approved range is not available.</span>
-    } @else if (band?.defined) {
-      <span class="dialog__band-label">Approved range for this role</span>
-      <span class="dialog__band-range">
-        {{ band?.min | money }} &ndash; {{ band?.max | money }} (midpoint {{ band?.mid | money }})
-      </span>
-      <span class="dialog__band-note">For context. Pay changes are not restricted to the band.</span>
+    @if (bandRange(); as range) {
+      @if (range.defined) {
+        <span class="dialog__band-label">Approved range for this role</span>
+        <span class="dialog__band-range">
+          {{ range.min | money }} &ndash; {{ range.max | money }} (midpoint {{ range.mid | money }})
+        </span>
+        <span class="dialog__band-note">For context. Pay changes are not restricted to the band.</span>
+      } @else {
+        <span class="dialog__band-note">No band defined for this role and level.</span>
+      }
     } @else {
-      <span class="dialog__band-note">No band defined for this role and level.</span>
+      <!-- Null means the read failed, which is not the same claim as "this role has no band". -->
+      <span class="dialog__band-note">The approved range is not available.</span>
     }
   </div>
 

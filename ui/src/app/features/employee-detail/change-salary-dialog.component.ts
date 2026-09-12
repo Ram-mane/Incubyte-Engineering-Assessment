@@ -53,7 +53,8 @@ export class ChangeSalaryDialogComponent {
   private readonly dialog = inject(MatDialogRef<ChangeSalaryDialogComponent>);
 
   protected readonly employee = this.data.employee;
-  protected readonly band = this.data.band;
+  /** A signal so the template can bind it once with `as` rather than optional-chaining it four times. */
+  protected readonly bandRange = signal(this.data.band);
   protected readonly reasons = CHANGE_REASONS;
 
   protected readonly amount = signal(this.employee.salary.amount);

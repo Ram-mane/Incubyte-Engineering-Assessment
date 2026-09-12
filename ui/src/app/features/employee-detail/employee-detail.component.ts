@@ -53,7 +53,7 @@ export class EmployeeDetailComponent implements OnInit {
   protected readonly session = inject(SessionService);
   private readonly dialogs = inject(MatDialog);
 
-  protected bandPosition(position: string | undefined): string {
+  protected bandPosition(position: string | null | undefined): string {
     return position ? (BAND_POSITIONS[position] ?? position) : '';
   }
 
