@@ -9,14 +9,19 @@ across multiple countries.
 **Live demo:** https://salary-management-ui-5bp6.onrender.com
 **API:** https://salary-management-api-bv03.onrender.com · **health:** [`/actuator/health`](https://salary-management-api-bv03.onrender.com/actuator/health)
 
-> **Deployed state:** the walking skeleton is live — Angular client, Spring Boot API and a
-> Flyway-migrated Neon PostgreSQL. The domain, the directory and the dashboard land over the
-> following two days. Free-tier instances spin down when idle, so the first request after a
-> quiet period takes roughly 50 seconds.
+**Sign in with** `hr.manager@acme.example` / `demo-password` (full access), or
+`hr.analyst@acme.example` / `demo-password` (read-only). Demo credentials in a demo database,
+published deliberately — see [Signing in](#signing-in).
 
-**API docs:** _Swagger UI is published with the REST API._
-**Demo credentials:** _issued with authentication._
-**Video walkthrough (3–5 min):** _recorded against the finished build._
+> ⏳ **First request takes up to two minutes.** Both services are on Render's free tier and spin
+> down when idle. Open the [health endpoint](https://salary-management-api-bv03.onrender.com/actuator/health)
+> and wait for `{"status":"UP"}` before using the site, or the first screen is a spinner. Measured
+> cold start: 67 s on a warm afternoon, over 120 s after a long idle.
+
+**API contract:** [`openapi.yaml`](openapi.yaml) — hand-written, and checked against the
+controllers. There is no Swagger UI; the spec is the contract and it is in the repository.
+
+**Video walkthrough (3–5 min):** _link added when recorded._
 
 ---
 
@@ -42,14 +47,17 @@ The rule the build is organised around:
 
 **Manage** — employee directory for 10,000 people, server-side paginated with filters and indexed
 name search · current annual base salary in each employee's local currency · salary changes with a
-mandatory reason and an append-only audit log · salary bands per role × level × country · CSV bulk
-import with a rejected-rows report.
+mandatory reason and an append-only audit log · salary bands per role × level × country, displayed
+on the employee record and never enforced.
+
+*Not built:* CSV bulk import. It is in the requirements as in-scope and it is the largest thing
+missing — see [Known issues](#known-issues-and-what-i-would-do-next).
 
 **Answer questions** — a dashboard with KPI cards (total global payroll spend, active headcount,
 average and median salary, all normalised to USD through a seeded FX table), interactive filters by
-country / department / role / level that recompute every card and chart, payroll breakdown by
-dimension, salary distribution with p25 / median / p75 / p90, and each employee's position within
-their band.
+country / department / role / level that recompute every card together from one query, payroll
+breakdown by department / country / level, and salary distribution with p25 / median / p75 / p90 by
+role or department. Each employee's position within their band is on their own record.
 
 ## Running it
 
@@ -60,11 +68,15 @@ cd ui && npm install && npm start                              # http://localhos
 ```
 
 ```bash
-./mvnw verify            # tests, ArchUnit, coverage, static analysis
-./mvnw -Pmutation test   # mutation testing, 70% threshold on the domain
-cd ui && npm test && npm run e2e
-k6 run perf/k6/directory-browse.js
+./mvnw verify            # unit + integration + ArchUnit + Spotless + Checkstyle + PMD + JaCoCo
+./mvnw -Pmutation test   # mutation testing, 70% threshold, currently 89%
+cd ui && npm test        # 101 Angular specs
+cd ui && npm run build   # the production compiler: stricter templates than the test run (D161)
 ```
+
+There is no end-to-end suite and no committed load test. Playwright and k6 were planned for Day 3
+and were cut when the dashboard, the currency-conversion defect and the concurrency fix took the
+time. The performance evidence that does exist is `EXPLAIN` output captured by hand, below.
 
 Both builds require **JDK 21** and **Node 22**; the Maven enforcer fails fast on anything else
 rather than producing bytecode for a JVM nobody verified.
@@ -91,7 +103,7 @@ actuator endpoint is information disclosure nobody asked for.
 ## Stack
 
 Java 21 · Spring Boot 3.3 · PostgreSQL 16 · Flyway · Angular 19 (standalone, signals) · Angular
-Material · Testcontainers · ArchUnit · Pitest · jqwik · k6 · GitHub Actions
+Material · Testcontainers · ArchUnit · Pitest · jqwik · GitHub Actions
 
 ## Documentation
 
@@ -109,7 +121,9 @@ Written **before and during** the build, not afterwards — the git history show
 | [AI workflow](docs/08-AI-WORKFLOW.md) | How Claude Code was used — **including where it got things wrong** |
 | [Trade-offs](docs/09-TRADEOFFS.md) | Nineteen decisions and what each one cost |
 | [Security](docs/10-SECURITY.md) | Model, and the known gaps stated plainly |
-| [ADRs](docs/adr/) | Thirteen decision records, each with rejected alternatives — including one superseded and kept |
+| [ADRs](docs/adr/) | Fifteen numbered records, each with rejected alternatives — sixteen files, because ADR-0002's superseded original is kept beside the one that replaced it |
+| [Decision log](docs/DECISIONS.md) | 161 smaller calls and their reasoning, append-only: superseded, never edited |
+| [Evidence](docs/evidence/) | `EXPLAIN` plans before and after each index, the FX drift measurement, and the JPA N+1 counted both ways |
 | [Clarifications](docs/CLARIFICATIONS.md) | The ten questions asked before building, the answers, and what each changed |
 
 ## Signing in
@@ -182,12 +196,49 @@ row inserted during paging shifts everything after it — silently repeating one
 another, which on a payroll screen is a person who appears twice and a person who does not appear
 at all.
 
+## How the tests were kept honest
+
+Coverage says a line ran. None of the following is about coverage.
+
+- **Every gate was proved to fail before it was trusted.** The ArchUnit rules were run against a
+  deliberate violation, the append-only grant against a real `UPDATE`, and the optimistic lock by
+  reverting its `WHERE` clause and watching two threads both succeed — `expected: 1 but was: 2`,
+  two revisions claiming the same starting salary. A gate that has never failed is decoration.
+- **Mutation testing at 89%**, 178 of 201 mutations killed, test strength 96%, against a 70%
+  threshold. [`docs/07-TEST-STRATEGY.md`](docs/07-TEST-STRATEGY.md) §5 also says what that number
+  *cannot* see — null guards, `Money`'s arithmetic and its rounding policy are covered by example
+  tests, not by the score, and the manual probes that stand in for it are written down.
+- **Tests that could not fail were found and fixed.** A median asserted where the mean would have
+  passed either way; a float-artefact check that ran after `Money` had already rounded; a
+  concurrency test asserting the scheduler rather than the invariant; a reload assertion that never
+  looked at what was reloaded. Each is recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md) with
+  what a passing suite was therefore not telling me.
+- **Statement counts are real.** `support/CountingDataSource` wraps the application's pool and
+  counts every `execute` at the JDBC boundary; integration tests declare a number and fail above
+  it. The JPA read path is measured both ways in
+  [`docs/evidence/09-jpa-read-path.txt`](docs/evidence/09-jpa-read-path.txt) — 31 statements naive,
+  1 with an entity graph, and 2 when a fixture accidentally hid the problem behind Hibernate's
+  first-level cache.
+
 ## Known issues and what I would do next
 
 An independent QA pass walked the running application against the requirements and found these.
 The ones that mattered for correctness or for the confirmed scope are fixed and listed in the
 commit log; what follows is what it found and I chose **not** to fix before submitting, with its
 framing rather than mine.
+
+**Not built, and in scope**
+
+- **CSV bulk import with a rejected-rows report.** In the requirements as in-scope and confirmed
+  with the customer; not built. The API and the screen are both missing. It is the largest gap in
+  the submission and I would do it first: streamed and chunked, partial success by default, because
+  an HR manager migrating off Excel needs to fix twelve bad rows rather than re-upload ten thousand.
+- **End-to-end journeys (Playwright) and a committed load test (k6).** Both planned for Day 3 and
+  both cut. What replaced them is narrower and real: the deployed site was walked through a
+  headless browser to verify each finished feature, and `docs/evidence/` holds `EXPLAIN` plans
+  captured with and without each index.
+- **Band position as a sortable column in the directory.** The band is on the employee record; the
+  directory-wide view of who sits where is not built.
 
 **Confusing**
 
