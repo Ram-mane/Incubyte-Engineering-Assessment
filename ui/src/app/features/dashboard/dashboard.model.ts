@@ -14,7 +14,13 @@ export interface PayrollSummary {
   readonly averageSalary: Money;
   readonly medianSalary: Money;
   readonly reportingCurrency: string;
-  readonly ratesAsOf: string;
+  /**
+   * Absent when no conversion happened - everybody matched was already paid in the reporting
+   * currency, so no rate was used and there is no date to name. Typed as optional because the
+   * server really does omit it, and a `string` that is sometimes null is a lie the compiler
+   * cannot catch.
+   */
+  readonly ratesAsOf?: string;
 }
 
 /** What the dashboard is looking at. Every field optional: the unfiltered view sets none of them. */
@@ -46,7 +52,7 @@ export interface PayrollBreakdown {
   readonly groupedBy: BreakdownDimension;
   readonly groups: readonly BreakdownGroup[];
   readonly reportingCurrency: string;
-  readonly ratesAsOf: string;
+  readonly ratesAsOf?: string;
 }
 
 /** What a distribution groups by. Narrower than a breakdown's: a country is not a peer group. */
@@ -68,5 +74,5 @@ export interface SalaryDistribution {
   readonly groupedBy: DistributionDimension;
   readonly groups: readonly DistributionGroup[];
   readonly reportingCurrency: string;
-  readonly ratesAsOf: string;
+  readonly ratesAsOf?: string;
 }

@@ -23,6 +23,12 @@ class BreakdownDimensionConverter implements Converter<String, BreakdownDimensio
 
     @Override
     public BreakdownDimension convert(String source) {
-        return BreakdownDimension.valueOf(source.trim().toUpperCase(Locale.ROOT));
+        try {
+            return BreakdownDimension.valueOf(source.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException unknown) {
+            throw new IllegalArgumentException(
+                    "No such breakdown dimension: %s. Expected department, country or level.".formatted(source),
+                    unknown);
+        }
     }
 }

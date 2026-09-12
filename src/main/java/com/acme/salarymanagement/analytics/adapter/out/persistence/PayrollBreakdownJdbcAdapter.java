@@ -35,7 +35,7 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class PayrollBreakdownJdbcAdapter implements PayrollBreakdownRepository {
 
-    private static final String BREAKDOWN = NormalisedSalaries.CTE
+    private static final String BREAKDOWN = NormalisedSalaries.CTE_PLACEHOLDER
             + """
             SELECT grp,
                    count(*)                AS headcount,
@@ -57,7 +57,7 @@ class PayrollBreakdownJdbcAdapter implements PayrollBreakdownRepository {
     @Override
     public PayrollBreakdown breakDown(BreakdownDimension dimension, DashboardFilters filters) {
         MapSqlParameterSource parameters = NormalisedSalaries.parameters(filters);
-        String sql = BREAKDOWN.formatted("e." + columnFor(dimension) + " AS grp,");
+        String sql = BREAKDOWN.replace(NormalisedSalaries.GROUPING, "e." + columnFor(dimension) + " AS grp,");
 
         Set<String> unconvertible = new LinkedHashSet<>();
         AtomicReference<LocalDate> asOf = new AtomicReference<>();

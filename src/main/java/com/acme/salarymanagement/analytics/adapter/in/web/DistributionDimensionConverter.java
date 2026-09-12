@@ -23,7 +23,16 @@ class DistributionDimensionConverter implements Converter<String, DistributionDi
 
     @Override
     public DistributionDimension convert(String source) {
-        String snake = source.trim().replaceAll("([a-z0-9])([A-Z])", "$1_$2");
-        return DistributionDimension.valueOf(snake.toUpperCase(Locale.ROOT));
+        // openapi says "read case-insensitively", and `jobtitle` has to honour that as much as
+        // `jobTitle` does - inserting the underscore only before a capital made the claim true of
+        // three spellings and false of the fourth.
+        String letters = source.trim().replaceAll("[^A-Za-z]", "").toUpperCase(Locale.ROOT);
+        for (DistributionDimension dimension : DistributionDimension.values()) {
+            if (dimension.name().replace("_", "").equals(letters)) {
+                return dimension;
+            }
+        }
+        throw new IllegalArgumentException(
+                "No such distribution dimension: %s. Expected jobTitle or department.".formatted(source));
     }
 }

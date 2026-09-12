@@ -37,10 +37,18 @@ import com.acme.salarymanagement.analytics.domain.UnconvertibleSalaries;
 final class NormalisedSalaries {
 
     /**
-     * {@code %s} is the extra select list - a grouping column, or empty. It is never request data:
-     * every caller passes a literal chosen from a closed enum.
+     * {@code {grouping}} is the extra select list - a grouping column, or nothing. It is never
+     * request data: every caller passes a literal chosen from a closed enum, through
+     * {@link #groupedBy(String)}.
+     *
+     * <p>A named placeholder rather than {@code %s} because two of the three callers hold this
+     * half-resolved and format it per request: the day someone writes a literal {@code %} into the
+     * shared select list - a LIKE pattern, a percentage in a comment - {@code formatted} would
+     * throw at request time on those two and at class-init on the third.
      */
-    static final String CTE =
+    static final String GROUPING = "{grouping}";
+
+    static final String CTE_PLACEHOLDER =
             """
             WITH snapshot AS (
                 SELECT max(as_of) AS as_of FROM exchange_rate WHERE to_currency = :reportingCurrency
@@ -52,7 +60,7 @@ final class NormalisedSalaries {
                   AND  r.as_of = s.as_of
             ),
             normalised AS (
-                SELECT %s
+                SELECT {grouping}
                        e.salary_currency AS currency,
                        CASE
                            WHEN e.salary_currency = :reportingCurrency THEN e.salary_amount
@@ -87,6 +95,11 @@ final class NormalisedSalaries {
             "SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency";
 
     private NormalisedSalaries() {}
+
+    /** The CTE with a grouping column spliced in. {@code column} is always a literal from an enum. */
+    static String groupedBy(String column) {
+        return CTE_PLACEHOLDER.replace(GROUPING, column == null ? "" : "e." + column + " AS grp,");
+    }
 
     static MapSqlParameterSource parameters(DashboardFilters filters) {
         return new MapSqlParameterSource()
@@ -132,10 +145,6 @@ final class NormalisedSalaries {
         if (unconvertible.isEmpty()) {
             return;
         }
-        String reportingCurrency = filters.reportingCurrency().code();
-        if (asOf == null) {
-            throw new UnconvertibleSalaries(reportingCurrency);
-        }
-        throw new UnconvertibleSalaries(reportingCurrency, asOf, List.copyOf(unconvertible));
+        throw new UnconvertibleSalaries(filters.reportingCurrency().code(), asOf, List.copyOf(unconvertible));
     }
 }

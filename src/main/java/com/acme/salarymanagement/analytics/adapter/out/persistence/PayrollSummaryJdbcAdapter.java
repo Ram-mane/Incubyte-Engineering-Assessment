@@ -38,7 +38,7 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class PayrollSummaryJdbcAdapter implements PayrollSummaryRepository {
 
-    private static final String SUMMARY = NormalisedSalaries.CTE.formatted("")
+    private static final String SUMMARY = NormalisedSalaries.groupedBy(null)
             + """
             SELECT count(*)                                                      AS headcount,
                    COALESCE(sum(reporting_amount), 0)                            AS total_spend,

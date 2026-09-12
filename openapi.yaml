@@ -454,7 +454,7 @@ components:
 
     PayrollSummary:
       type: object
-      required: [headcount, totalSpend, averageSalary, medianSalary, reportingCurrency, ratesAsOf]
+      required: [headcount, totalSpend, averageSalary, medianSalary, reportingCurrency]
       properties:
         headcount:
           type: integer
@@ -476,6 +476,9 @@ components:
             The date whose exchange rates every figure above was converted through. Reported rather
             than assumed: a total normalised through "whatever rate was current" is a number nobody
             can reproduce next week.
+
+            Absent when no conversion happened - every employee matched was already paid in the
+            reporting currency, so no rate was used and there is no date to name.
           example: "2026-09-01"
 
     BreakdownDimension:
@@ -485,7 +488,7 @@ components:
 
     PayrollBreakdown:
       type: object
-      required: [groupedBy, groups, reportingCurrency, ratesAsOf]
+      required: [groupedBy, groups, reportingCurrency]
       properties:
         groupedBy:
           $ref: '#/components/schemas/BreakdownDimension'
@@ -514,7 +517,9 @@ components:
         ratesAsOf:
           type: string
           format: date
-          description: The date whose exchange rates every figure above was converted through.
+          description: |
+            The date whose exchange rates every figure above was converted through. Absent when no
+            conversion was needed.
           example: "2026-09-01"
 
     DistributionDimension:
@@ -526,7 +531,7 @@ components:
 
     SalaryDistribution:
       type: object
-      required: [groupedBy, groups, reportingCurrency, ratesAsOf]
+      required: [groupedBy, groups, reportingCurrency]
       properties:
         groupedBy:
           $ref: '#/components/schemas/DistributionDimension'
@@ -557,6 +562,7 @@ components:
         ratesAsOf:
           type: string
           format: date
+          description: The date the figures were converted through. Absent when none was needed.
           example: "2026-09-01"
 
     DirectoryFilterOptions:

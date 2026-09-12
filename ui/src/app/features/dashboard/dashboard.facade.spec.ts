@@ -221,6 +221,40 @@ describe('DashboardFacade', () => {
     expect(facade.failure()).toContain('could not be loaded');
   });
 
+  it('says so when the breakdown fails while the cards succeed', () => {
+    answering(summary(9842, '1213179157.20'));
+    api.breakdown.and.returnValue(throwError(() => ({ error: { detail: 'No exchange rate to EUR for INR.' } })));
+
+    facade.load({});
+
+    // Three requests, three answers. A heading over blank space is indistinguishable from still
+    // loading, and one refresh away from reading as "this company has no departments".
+    expect(facade.summary()?.headcount).toBe(9842);
+    expect(facade.hasFailed()).toBeFalse();
+    expect(facade.breakdownFailure()).toContain('No exchange rate to EUR');
+  });
+
+  it('says so when the distribution fails on its own', () => {
+    answering(summary(9842, '1213179157.20'));
+    api.distribution.and.returnValue(throwError(() => new Error('timeout')));
+
+    facade.load({});
+
+    expect(facade.distributionFailure()).toContain('could not be loaded');
+    expect(facade.breakdownFailure()).toBeNull();
+  });
+
+  it('clears a section failure when the next request succeeds', () => {
+    answering(summary(9842, '1213179157.20'));
+    api.breakdown.and.returnValue(throwError(() => new Error('timeout')));
+    facade.load({});
+    api.breakdown.and.returnValue(of(breakdown('Engineering')));
+
+    facade.load({ country: 'DE' });
+
+    expect(facade.breakdownFailure()).toBeNull();
+  });
+
   it('offers the filter values the directory actually contains', () => {
     answering(summary(9842, '1213179157.20'));
 

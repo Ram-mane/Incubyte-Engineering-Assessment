@@ -55,6 +55,20 @@ class ExchangeRateCoverageIT extends PostgresIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    /**
+     * The container is reused between runs and Flyway will not undo a committed insert, so a row
+     * leaked by a JVM that died mid-test would make every dashboard test fail on the default path
+     * with nothing in their own sources to explain it. Sweep before, not only after.
+     */
+    @org.junit.jupiter.api.BeforeEach
+    @org.junit.jupiter.api.AfterEach
+    void noRateRowOutlivesThisClass() throws Exception {
+        try (java.sql.Connection owner = DatabaseOwner.connect();
+                var sweep = owner.prepareStatement("DELETE FROM exchange_rate WHERE as_of <> DATE '2026-09-01'")) {
+            sweep.executeUpdate();
+        }
+    }
+
     @Test
     void a_reporting_currency_the_table_cannot_reach_is_refused_rather_than_guessed() {
         insert("IN", "1000000.00");
@@ -65,7 +79,9 @@ class ExchangeRateCoverageIT extends PostgresIntegrationTest {
         assertThatThrownBy(() -> summaries.of(ours(EUR)))
                 .isInstanceOf(UnconvertibleSalaries.class)
                 .hasMessageContaining("EUR")
-                .hasMessageContaining("No exchange rates");
+                .hasMessageContaining("No exchange rates")
+                // The currencies are the actionable half, and are named even with no date to name.
+                .hasMessageContaining("INR");
     }
 
     @Test

@@ -3,8 +3,12 @@
     <h1>Compensation dashboard</h1>
     @if (dashboard.summary(); as summary) {
       <p class="dashboard__basis">
-        Normalised to {{ summary.reportingCurrency }} at exchange rates of
-        {{ summary.ratesAsOf | date: 'mediumDate' }}
+        @if (summary.ratesAsOf) {
+          Normalised to {{ summary.reportingCurrency }} at exchange rates of
+          {{ summary.ratesAsOf | date: 'mediumDate' }}
+        } @else {
+          Reported in {{ summary.reportingCurrency }}. No conversion was needed.
+        }
       </p>
     }
   </header>
@@ -112,6 +116,10 @@
       </mat-button-toggle-group>
     </header>
 
+    @if (dashboard.breakdownFailure(); as problem) {
+      <p role="alert" class="dashboard__error">{{ problem }}</p>
+    }
+
     @if (dashboard.breakdown(); as breakdown) {
       @if (breakdown.groups.length === 0) {
         <p class="dashboard__empty">No groups to show. Nobody matches these filters.</p>
@@ -161,6 +169,10 @@
         }
       </mat-button-toggle-group>
     </header>
+
+    @if (dashboard.distributionFailure(); as problem) {
+      <p role="alert" class="dashboard__error">{{ problem }}</p>
+    }
 
     @if (dashboard.distribution(); as distribution) {
       @if (distribution.groups.length === 0) {

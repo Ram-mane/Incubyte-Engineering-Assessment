@@ -27,6 +27,7 @@ import com.acme.salarymanagement.analytics.application.port.in.GetSalaryDistribu
 import com.acme.salarymanagement.analytics.application.port.in.PayrollBreakdown;
 import com.acme.salarymanagement.analytics.application.port.in.PayrollSummary;
 import com.acme.salarymanagement.analytics.application.port.in.SalaryDistribution;
+import com.acme.salarymanagement.analytics.domain.UnconvertibleSalaries;
 import com.acme.salarymanagement.shared.CurrencyCode;
 import com.acme.salarymanagement.shared.Money;
 
@@ -48,6 +49,8 @@ class DashboardControllerTest {
     static final AtomicReference<BreakdownDimension> LAST_DIMENSION = new AtomicReference<>();
     static final AtomicReference<DashboardFilters> LAST_FILTERS = new AtomicReference<>();
     static final AtomicReference<DistributionDimension> LAST_DISTRIBUTION = new AtomicReference<>();
+    /** Set by a test that wants the use case to refuse, so the advice is on the path. */
+    static final AtomicReference<UnconvertibleSalaries> REFUSE_WITH = new AtomicReference<>();
 
     @Autowired
     private MockMvc mvc;
@@ -132,6 +135,36 @@ class DashboardControllerTest {
         mvc.perform(get("/api/v1/dashboard/distribution?groupBy=country")).andExpect(status().isBadRequest());
     }
 
+    @Test
+    void a_dimension_spelled_in_any_case_is_read_the_same_way() throws Exception {
+        mvc.perform(get("/api/v1/dashboard/distribution?groupBy=jobtitle")).andExpect(status().isOk());
+
+        // openapi says these are read case-insensitively. jobtitle is the spelling that used to
+        // 400 while jobTitle, JobTitle and JOB_TITLE all worked.
+        org.assertj.core.api.Assertions.assertThat(LAST_DISTRIBUTION.get()).isEqualTo(DistributionDimension.JOB_TITLE);
+    }
+
+    @Test
+    void a_salary_that_cannot_be_converted_is_a_422_naming_the_currencies_and_no_amount() throws Exception {
+        REFUSE_WITH.set(
+                new UnconvertibleSalaries("EUR", java.time.LocalDate.of(2026, 9, 1), java.util.List.of("INR", "GBP")));
+        try {
+            mvc.perform(get("/api/v1/dashboard/summary?currency=EUR"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.title").value("These salaries cannot be reported in that currency"))
+                    .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("INR")))
+                    .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("2026-09-01")))
+                    // D080: currencies and a date, never an amount. Matched on the shape of money
+                    // rather than on digits - the date's own "2026" is a four-digit run.
+                    .andExpect(jsonPath("$.detail")
+                            .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.matchesRegex(".*\\d+\\.\\d{2}.*"))))
+                    .andExpect(jsonPath("$.detail")
+                            .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.matchesRegex(".*\\d{5,}.*"))));
+        } finally {
+            REFUSE_WITH.set(null);
+        }
+    }
+
     @TestConfiguration
     static class StubbedAnalytics {
 
@@ -174,12 +207,23 @@ class DashboardControllerTest {
 
         @Bean
         GetPayrollSummary summaries() {
-            return filters -> new PayrollSummary(
-                    1,
-                    money("100000.00", filters.reportingCurrency()),
-                    money("100000.00", filters.reportingCurrency()),
-                    money("100000.00", filters.reportingCurrency()),
-                    LocalDate.of(2026, 9, 1));
+            return filters -> refuseIfAsked()
+                    ? null
+                    : new PayrollSummary(
+                            1,
+                            money("100000.00", filters.reportingCurrency()),
+                            money("100000.00", filters.reportingCurrency()),
+                            money("100000.00", filters.reportingCurrency()),
+                            LocalDate.of(2026, 9, 1));
+        }
+
+        /** Throws when a test has armed a refusal, so the 422 advice is exercised for real. */
+        private static boolean refuseIfAsked() {
+            UnconvertibleSalaries refusal = REFUSE_WITH.get();
+            if (refusal != null) {
+                throw refusal;
+            }
+            return false;
         }
 
         private static Money money(String amount, CurrencyCode currency) {

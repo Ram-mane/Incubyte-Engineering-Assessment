@@ -197,6 +197,17 @@ describe('DashboardComponent', () => {
     expect(valueUnder(element, 'kpi-headcount')).toBe('9,842');
   });
 
+  it('says no conversion was needed rather than printing an empty date', async () => {
+    showing({ ...populated, ratesAsOf: undefined });
+    await render();
+
+    // The server omits the date when nothing needed converting - everybody matched was already
+    // paid in the reporting currency. "at exchange rates of" followed by nothing is worse than
+    // saying so.
+    expect(element.querySelector('.dashboard__basis')?.textContent).toContain('No conversion was needed');
+    expect(element.querySelector('.dashboard__basis')?.textContent).not.toContain('exchange rates of');
+  });
+
   it('says which day the exchange rates are from', async () => {
     await render();
 

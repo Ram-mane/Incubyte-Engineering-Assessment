@@ -37,6 +37,8 @@ export class DashboardFacade {
   private readonly loading = signal(false);
   private readonly failed = signal(false);
   private readonly refusal = signal<string | null>(null);
+  private readonly breakdownRefusal = signal<string | null>(null);
+  private readonly distributionRefusal = signal<string | null>(null);
   private readonly query = signal<DashboardQuery>({});
   /** Which request the screen is currently showing. Answers to older ones are dropped. */
   private inFlight = 0;
@@ -53,6 +55,13 @@ export class DashboardFacade {
   readonly breakdown = this.groups.asReadonly();
   readonly dimension = this.groupedBy.asReadonly();
   readonly distribution = this.spread.asReadonly();
+  /**
+   * Each section answers for itself. The cards, the breakdown and the distribution are three
+   * requests: one can fail while the others succeed, and a heading over blank space is
+   * indistinguishable from "still loading" and one refresh away from reading as "no departments".
+   */
+  readonly breakdownFailure = this.breakdownRefusal.asReadonly();
+  readonly distributionFailure = this.distributionRefusal.asReadonly();
   readonly distributionDimension = this.spreadBy.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly hasFailed = this.failed.asReadonly();
@@ -123,17 +132,18 @@ export class DashboardFacade {
 
   private loadBreakdown(query: DashboardQuery): void {
     const request = ++this.inFlightBreakdown;
+    this.breakdownRefusal.set(null);
     this.api.breakdown(this.groupedBy(), query).subscribe({
       next: (breakdown) => {
         if (request === this.inFlightBreakdown) {
           this.groups.set(breakdown);
         }
       },
-      error: () => {
+      error: (failure: { error?: { detail?: string } }) => {
         if (request === this.inFlightBreakdown) {
-          // The cards carry the "could not be loaded" message for the screen; a breakdown that
-          // failed shows nothing rather than the previous filter's groups.
+          // Dropped rather than left showing the previous filter's groups, and said out loud.
           this.groups.set(null);
+          this.breakdownRefusal.set(failure?.error?.detail ?? 'This breakdown could not be loaded.');
         }
       },
     });
@@ -141,15 +151,17 @@ export class DashboardFacade {
 
   private loadDistribution(query: DashboardQuery): void {
     const request = ++this.inFlightDistribution;
+    this.distributionRefusal.set(null);
     this.api.distribution(this.spreadBy(), query).subscribe({
       next: (distribution) => {
         if (request === this.inFlightDistribution) {
           this.spread.set(distribution);
         }
       },
-      error: () => {
+      error: (failure: { error?: { detail?: string } }) => {
         if (request === this.inFlightDistribution) {
           this.spread.set(null);
+          this.distributionRefusal.set(failure?.error?.detail ?? 'This distribution could not be loaded.');
         }
       },
     });

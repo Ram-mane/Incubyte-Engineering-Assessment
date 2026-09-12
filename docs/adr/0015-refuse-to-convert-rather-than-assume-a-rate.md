@@ -52,7 +52,16 @@ currency out of six.
 names what is missing, and tells an operator what to fix. The refusal is all-or-nothing, so a total
 can never quietly omit a currency.
 
-**Bad.** A rate table that is incomplete takes the whole dashboard down rather than degrading. For
+**Bad, and sharper than it first looks.** A rate table that is incomplete takes the whole dashboard
+down rather than degrading — and **an operator cannot fix it from the running system**. `V5` grants
+the application `SELECT` only on `exchange_rate` and seeds the rows from a migration, so restoring
+the dashboard means a migration and a deploy. One employee onboarded outside the six seeded
+countries — `CountryCode` admits every ISO country the JDK has a currency for — is enough to do it,
+on the default unfiltered view, for every user. The message names what is missing; it does not put
+it within reach. Until rates come from the `ExchangeRateProvider` port with a writable store behind
+it, that gap is real and is the price of never printing a wrong figure.
+
+A rate table that is incomplete takes the whole dashboard down rather than degrading. For
 payroll figures that is the right trade — a number an HR manager would act on and could not
 question is worse than a page that says why it will not answer — but it does mean rate coverage is
 now an availability dependency. The reporting currency is still not validated at the edge: asking

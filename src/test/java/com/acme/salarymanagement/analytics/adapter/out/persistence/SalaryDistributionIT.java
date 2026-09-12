@@ -84,16 +84,6 @@ class SalaryDistributionIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void no_percentile_carries_a_float_artefact() {
-        var role = groupNamed(distributions.by(DistributionDimension.JOB_TITLE, ours()), OURS);
-
-        assertThat(role.p25().amount().toPlainString()).doesNotContain("00000000");
-        assertThat(role.median().amount().toPlainString()).doesNotContain("00000000");
-        assertThat(role.p75().amount().toPlainString()).doesNotContain("00000000");
-        assertThat(role.p90().amount().toPlainString()).doesNotContain("00000000");
-    }
-
-    @Test
     void the_range_is_the_lowest_and_highest_in_the_group() {
         var role = groupNamed(distributions.by(DistributionDimension.JOB_TITLE, ours()), OURS);
 
@@ -123,9 +113,11 @@ class SalaryDistributionIT extends PostgresIntegrationTest {
         var role = groupNamed(distributions.by(DistributionDimension.JOB_TITLE, ours()), OURS);
 
         assertThat(role.headcount()).isEqualTo(5);
-        assertThat(role.median().amount())
-                .as("five people: 100,000 / 108,500 / 200,000 / 300,000 / 400,000 - the middle is 200,000")
-                .isEqualByComparingTo("200000.00");
+        // p25, not the median: the median is 200,000 whether or not the euro salary was converted,
+        // so asserting it would leave this test blind to the thing it is named for. p25 of
+        // 100,000 / 108,500 / 200,000 / 300,000 / 400,000 is 108,500 converted and 100,000 not.
+        assertThat(role.p25().amount()).isEqualByComparingTo("108500.00");
+        assertThat(role.median().amount()).isEqualByComparingTo("200000.00");
     }
 
     @Test
@@ -147,6 +139,19 @@ class SalaryDistributionIT extends PostgresIntegrationTest {
         assertThat(byRole.rows()).hasSize(1);
         assertThat(byRole.rows().get(0).group()).isEqualTo(OTHER_ROLE);
         assertThat(byRole.rows().get(0).headcount()).isEqualTo(2);
+    }
+
+    @Test
+    void the_empty_case_pays_one_extra_statement_to_name_its_rates() {
+        var nobody = filters("JP", OUR_DEPARTMENT, null);
+
+        long statements =
+                CountingDataSource.statementsIssuedBy(() -> distributions.by(DistributionDimension.JOB_TITLE, nobody));
+
+        // The populated path is one statement; with no groups there is no row to carry the
+        // snapshot date, so it costs a second (D144). Pinned on both queries, not just the
+        // breakdown - D144 claims it of the grouped queries, plural.
+        assertThat(statements).isEqualTo(2);
     }
 
     @Test

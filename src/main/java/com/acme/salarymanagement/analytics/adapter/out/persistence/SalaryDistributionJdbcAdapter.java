@@ -38,7 +38,7 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class SalaryDistributionJdbcAdapter implements SalaryDistributionRepository {
 
-    private static final String DISTRIBUTION = NormalisedSalaries.CTE
+    private static final String DISTRIBUTION = NormalisedSalaries.CTE_PLACEHOLDER
             + """
             SELECT grp,
                    count(*)              AS headcount,
@@ -64,7 +64,7 @@ class SalaryDistributionJdbcAdapter implements SalaryDistributionRepository {
     @Override
     public SalaryDistribution distribute(DistributionDimension dimension, DashboardFilters filters) {
         MapSqlParameterSource parameters = NormalisedSalaries.parameters(filters);
-        String sql = DISTRIBUTION.formatted("e." + columnFor(dimension) + " AS grp,");
+        String sql = DISTRIBUTION.replace(NormalisedSalaries.GROUPING, "e." + columnFor(dimension) + " AS grp,");
 
         Set<String> unconvertible = new LinkedHashSet<>();
         AtomicReference<LocalDate> asOf = new AtomicReference<>();
