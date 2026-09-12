@@ -104,21 +104,19 @@ class PayrollSummaryIT extends PostgresIntegrationTest {
 
     @Test
     void a_filter_narrows_the_cards_together() {
-        var engineering = summaries.of(new DashboardFilters(
-                null, new Department("Engineering"), null, null, DashboardFilters.DEFAULT_REPORTING_CURRENCY));
+        var engineering = ours().withDepartment(new Department("Engineering"));
 
-        // Six of the nine, two per market: 2 x (100,000 + 108,500 + 11,900) = 440,800.
-        assertThat(engineering.headcount()).isEqualTo(6);
-        assertThat(engineering.totalSpend().amount()).isEqualByComparingTo("440800.00");
+        // Six of this test's nine, two per market: 2 x (100,000 + 108,500 + 11,900) = 440,800.
+        assertThat(summaries.of(engineering).headcount()).isEqualTo(6);
+        assertThat(summaries.of(engineering).totalSpend().amount()).isEqualByComparingTo("440800.00");
     }
 
     @Test
     void a_country_filter_leaves_that_market_in_its_own_converted_figures() {
-        var india = summaries.of(new DashboardFilters(
-                new CountryCode("IN"), null, null, null, DashboardFilters.DEFAULT_REPORTING_CURRENCY));
+        var india = ours().withCountry(new CountryCode("IN"));
 
-        assertThat(india.headcount()).isEqualTo(3);
-        assertThat(india.totalSpend().amount()).isEqualByComparingTo("35700.00");
+        assertThat(summaries.of(india).headcount()).isEqualTo(3);
+        assertThat(summaries.of(india).totalSpend().amount()).isEqualByComparingTo("35700.00");
     }
 
     @Test

@@ -28,4 +28,12 @@ public record DashboardFilters(
     public static DashboardFilters everyone() {
         return new DashboardFilters(null, null, null, null, DEFAULT_REPORTING_CURRENCY);
     }
+
+    public DashboardFilters withCountry(CountryCode narrowed) {
+        return new DashboardFilters(narrowed, department, jobTitle, level, reportingCurrency);
+    }
+
+    public DashboardFilters withDepartment(Department narrowed) {
+        return new DashboardFilters(country, narrowed, jobTitle, level, reportingCurrency);
+    }
 }
