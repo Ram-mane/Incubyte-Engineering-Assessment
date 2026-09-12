@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import com.acme.salarymanagement.employee.application.port.out.EmployeeRepository;
+import com.acme.salarymanagement.employee.application.service.EmployeeNotFound;
 import com.acme.salarymanagement.employee.domain.ConcurrentSalaryChange;
 import com.acme.salarymanagement.employee.domain.EmailAddress;
 import com.acme.salarymanagement.employee.domain.Employee;
@@ -48,6 +49,19 @@ class EmployeeJdbcAdapter implements EmployeeRepository {
         this.jdbc = jdbc;
     }
 
+    /** Only on the failure path, to tell a lost update apart from a row that is gone. */
+    private boolean stillThere(EmployeeId id) {
+        Integer found = jdbc
+                .query(
+                        "SELECT 1 FROM employee WHERE id = ?",
+                        (java.sql.ResultSet row, int number) -> row.getInt(1),
+                        id.value())
+                .stream()
+                .findFirst()
+                .orElse(null);
+        return found != null;
+    }
+
     @Override
     public Optional<Employee> load(EmployeeId id) {
         return jdbc
@@ -85,10 +99,12 @@ class EmployeeJdbcAdapter implements EmployeeRepository {
                 replacing.amount(),
                 replacing.currency().code());
         if (updated != ONE_ROW) {
-            // Either somebody else moved this salary first, or the employee is gone. Both mean the
-            // revision about to be written describes a step that did not happen, and the whole
-            // transaction has to go with it.
-            throw new ConcurrentSalaryChange(employee.id());
+            // Zero rows has two causes and they are not the same news. Telling somebody their
+            // colleague changed this pay, about an employee that is no longer there, sends them
+            // looking for a change nobody made.
+            throw stillThere(employee.id())
+                    ? new ConcurrentSalaryChange(employee.id())
+                    : new EmployeeNotFound(employee.id());
         }
     }
 }

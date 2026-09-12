@@ -167,6 +167,11 @@ class SalaryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\":\"1500000.00\",\"currency\":\"INR\",\"reason\":\"MERIT\"}"))
                 .andExpect(status().isConflict())
+                // The contract promises problem+json and the screen reads `detail` off it; a
+                // regression to application/json would be invisible without this line.
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("https://salary-management.dev/errors/concurrent-salary-change"))
                 .andExpect(jsonPath("$.title").value("This pay change was not applied"))
                 // Tells the caller what to do instead of repeating the request unchanged, and
                 // names no amount (D080).

@@ -26,6 +26,7 @@ describe('EmployeeDetailFacade', () => {
     api = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['byId', 'revisions', 'changeSalary']);
     api.byId.and.returnValue(of(alice));
     api.revisions.and.returnValue(of([]));
+    api.revisions.calls.reset();
     TestBed.configureTestingModule({
       providers: [EmployeeDetailFacade, { provide: EmployeeApiService, useValue: api }],
     });
@@ -33,6 +34,8 @@ describe('EmployeeDetailFacade', () => {
   });
 
   it('shows the pay now on record when somebody else changed it first', () => {
+    // What the reload finds: the winner's figure, not the one this manager decided against.
+    api.byId.and.returnValue(of({ ...alice, salary: { amount: '1450000.00', currency: 'INR' } }));
     api.changeSalary.and.returnValue(
       throwError(() => ({
         status: 409,
@@ -47,8 +50,13 @@ describe('EmployeeDetailFacade', () => {
     facade.changeSalary(alice.id, { amount: '1500000.00', currency: 'INR', reason: 'MERIT' }, () => undefined);
 
     expect(facade.changeError()).toContain('Reload');
-    // Re-read, because the figure on screen is now the stale one this manager decided against.
-    expect(api.byId).toHaveBeenCalled();
+    // The point is not that a reload was requested, it is that the figure on screen changed. A
+    // reload whose result is discarded leaves the manager reading the stale number under a message
+    // telling them to reload.
+    expect(facade.employee()?.salary.amount).toBe('1450000.00');
+    expect(api.byId).toHaveBeenCalledWith(alice.id);
+    // The winner's entry belongs in the log the manager is about to look at.
+    expect(api.revisions).toHaveBeenCalledTimes(1);
   });
 
   it('does not reload after a refusal that leaves the salary where it was', () => {

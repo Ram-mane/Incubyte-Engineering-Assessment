@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
@@ -43,7 +42,9 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
  * log is the thing this system exists to be trusted about.
  *
  * <p>Not {@code @Transactional}: these writes have to commit for a second connection to see them.
- * The employee is this test's own and nothing else reads it.
+ * They are therefore swept afterwards - an unfiltered directory or dashboard query reads every
+ * employee in the table, and a `Zzzconcurrent` department turning up in a filter dropdown is a
+ * confusing way to learn that this class littered.
  */
 @WithMockUser(roles = "HR_MANAGER")
 class ConcurrentSalaryChangeIT extends PostgresIntegrationTest {
@@ -115,7 +116,7 @@ class ConcurrentSalaryChangeIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void two_managers_changing_the_same_salary_at_once_leave_exactly_one_change_behind() throws Exception {
+    void no_two_revisions_can_claim_the_same_starting_salary() throws Exception {
         CyclicBarrier bothReady = new CyclicBarrier(2);
         AtomicInteger accepted = new AtomicInteger();
         AtomicInteger refused = new AtomicInteger();
@@ -124,13 +125,16 @@ class ConcurrentSalaryChangeIT extends PostgresIntegrationTest {
         // the use-case layer - so each manager has to carry it onto their thread explicitly.
         var authenticated = org.springframework.security.core.context.SecurityContextHolder.getContext();
 
-        Callable<Void> raise = () -> {
+        java.util.function.Function<String, Callable<Void>> manager = target -> () -> {
             org.springframework.security.core.context.SecurityContextHolder.setContext(authenticated);
             bothReady.await(10, TimeUnit.SECONDS);
             try {
-                changeSalary.change(new ChangeSalaryCommand(id, usd("140000.00"), ChangeReason.MERIT, actor, "raced"));
+                changeSalary.change(new ChangeSalaryCommand(id, usd(target), ChangeReason.MERIT, actor, "raced"));
                 accepted.incrementAndGet();
-            } catch (ConcurrentSalaryChange | org.springframework.dao.DataAccessException refusedChange) {
+            } catch (ConcurrentSalaryChange refusedChange) {
+                // Only this one is caught. A guard that failed some other way - a lock timeout, a
+                // constraint - would surface as a 500 rather than a 409, and a broader catch would
+                // count that as success.
                 refused.incrementAndGet();
             }
             return null;
@@ -138,24 +142,46 @@ class ConcurrentSalaryChangeIT extends PostgresIntegrationTest {
 
         ExecutorService managers = Executors.newFixedThreadPool(2);
         try {
-            for (Future<Void> attempt : managers.invokeAll(List.of(raise, raise))) {
+            // Two different figures on purpose. With the same figure, a schedule where one manager
+            // finishes before the other starts reading makes the second a no-op that the aggregate
+            // refuses for an unrelated reason - so the test would be asserting the scheduler.
+            for (Future<Void> attempt :
+                    managers.invokeAll(List.of(manager.apply("140000.00"), manager.apply("150000.00")))) {
                 attempt.get(20, TimeUnit.SECONDS);
             }
         } finally {
             managers.shutdownNow();
         }
 
-        // One of them has to lose. What matters is that the loser is told, rather than both
-        // succeeding and the audit log carrying two revisions from the same starting salary -
-        // which is exactly what happens with the guard removed: accepted 2, revisions 2.
-        assertThat(accepted.get()).isEqualTo(1);
-        assertThat(refused.get()).isEqualTo(1);
-        assertThat(revisionCount()).isEqualTo(1);
-        assertThat(currentSalary()).isEqualByComparingTo("140000.00");
+        // The invariant, true under either schedule and false the moment the guard goes: no two
+        // revisions may claim to have started from the same salary. Interleaved, one manager is
+        // refused and one revision exists. Serialised, both succeed and the second starts from
+        // where the first finished - two revisions, two different starting figures. Unguarded, the
+        // interleaved case writes two revisions both starting at 100,000, which is the history
+        // that never happened.
+        assertThat(distinctStartingSalaries()).isEqualTo(revisionCount());
+        assertThat(accepted.get() + refused.get()).isEqualTo(2);
+        assertThat(accepted.get()).isPositive();
+        // Whatever the order, the salary on record is what the last accepted change wrote.
+        assertThat(currentSalary()).isEqualByComparingTo(lastRevisionAmount());
     }
 
     private BigDecimal currentSalary() {
         return jdbc.queryForObject("SELECT salary_amount FROM employee WHERE id = ?", BigDecimal.class, id.value());
+    }
+
+    private long distinctStartingSalaries() {
+        return jdbc.queryForObject(
+                "SELECT count(DISTINCT previous_amount) FROM salary_revision WHERE employee_id = ?",
+                Long.class,
+                id.value());
+    }
+
+    private BigDecimal lastRevisionAmount() {
+        return jdbc.queryForObject(
+                "SELECT new_amount FROM salary_revision WHERE employee_id = ? ORDER BY changed_at DESC LIMIT 1",
+                BigDecimal.class,
+                id.value());
     }
 
     private long revisionCount() {
@@ -167,7 +193,22 @@ class ConcurrentSalaryChangeIT extends PostgresIntegrationTest {
         return Money.of(new BigDecimal(amount), USD);
     }
 
-    static {
-        Locale.setDefault(Locale.ROOT);
+    /** Committed rows, swept: an unfiltered directory or dashboard query reads all of them. */
+    @org.junit.jupiter.api.AfterEach
+    void removeWhatThisTestCommitted() throws Exception {
+        try (java.sql.Connection owner = com.acme.salarymanagement.support.DatabaseOwner.connect()) {
+            try (var revisions = owner.prepareStatement("DELETE FROM salary_revision WHERE employee_id = ?")) {
+                revisions.setObject(1, id.value());
+                revisions.executeUpdate();
+            }
+            try (var employee = owner.prepareStatement("DELETE FROM employee WHERE id = ?")) {
+                employee.setObject(1, id.value());
+                employee.executeUpdate();
+            }
+            try (var user = owner.prepareStatement("DELETE FROM app_user WHERE id = ?")) {
+                user.setObject(1, actor.value());
+                user.executeUpdate();
+            }
+        }
     }
 }

@@ -49,6 +49,10 @@ filters, one round trip per filter change, 23 new Angular specs. The breakdown a
 Proved by reverting the clause — both threads succeed and the log carries two revisions from the
 same starting figure. Three integration tests, one of them genuinely threaded.
 
+**Still open underneath it:** `04-API-DESIGN.md` promises `Idempotency-Key` on salary changes and
+`ETag`/`If-Match` on employee updates. Neither is built, and a client sending `If-Match` today is
+ignored. The lost update is closed; the documented concurrency contract is not.
+
 **3. Render free tier cold start exceeds two minutes.** The first request after idle returned
 nothing for 120 s; the next returned in 1.3 s. Warm the API with
 `curl https://salary-management-api-bv03.onrender.com/actuator/health` **before demoing or

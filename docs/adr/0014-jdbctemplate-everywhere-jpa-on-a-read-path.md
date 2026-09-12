@@ -68,13 +68,18 @@ the query the application actually sends.
 
 **Bad.**
 
-- **There is no optimistic locking, and `04-API-DESIGN.md` promises `ETag`/`If-Match` on employee
-  updates.** Two managers changing the same salary concurrently both succeed: the log gets two
-  revisions whose `previous_amount` is the same figure, and the employee ends on whichever `UPDATE`
-  committed second. The audit log then describes a history that never happened. This is the most
-  serious cost here and it is not hypothetical — it needs a `version` column and a conditional
-  `UPDATE … WHERE version = ?`, which is a schema change plus a use-case change, and neither is
-  scheduled.
+- **~~There is no optimistic locking~~ — amended by [D147](../DECISIONS.md), 12 Sep 2026.** As
+  written, this bullet was true: two managers changing the same salary concurrently both succeeded,
+  the log got two revisions whose `previous_amount` was the same figure, and the employee ended on
+  whichever `UPDATE` committed second. It is now guarded — but **not** the way this bullet
+  predicted. There is no `version` column and no schema change: the `UPDATE` is a compare-and-set on
+  the salary itself (`WHERE id = ? AND salary_amount = ? AND salary_currency = ?`), because the
+  value being guarded is the value being written. Zero rows is a 409. Read D147 before adding a
+  version column on top of it — two guards that disagree is worse than either alone.
+
+  **Still outstanding from this bullet:** `04-API-DESIGN.md` promises `ETag`/`If-Match` on employee
+  updates and `Idempotency-Key` on salary changes. Neither is built. The lost update is closed; the
+  documented concurrency *contract* is not, and a client that sends `If-Match` today is ignored.
 - **Row mapping is hand-written and unchecked against the schema.** A renamed column compiles and
   fails at runtime; only the integration tests stand between that and a deploy.
 - **`spring.jpa.hibernate.ddl-auto: validate` currently validates nothing**, because there are no
@@ -96,8 +101,9 @@ the query the application actually sends.
 - The first `Employee` that acquires a **real object graph** — a manager chain walked in code, an
   employment history, bands loaded per employee — rather than the flat row it is today.
 
-Concurrency does **not** trigger it: optimistic locking arrives as `WHERE version = ?` in SQL, which
-needs no ORM.
+Concurrency does **not** trigger it, and this is now settled rather than predicted: optimistic
+locking arrived as a compare-and-set in SQL (D147) and needed no ORM — and no version column
+either, which is where this sentence originally guessed wrong.
 
 ## Rejected
 

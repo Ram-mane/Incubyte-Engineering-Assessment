@@ -208,7 +208,16 @@ paths:
             Somebody else changed this employee's pay between the figure this request was decided
             against and this write. The change was not applied and no revision was recorded.
             Reload the employee and decide again: repeating the request unchanged would record a
-            step the pay never took. See ADR-0014's consequences and D147.
+            step the pay never took. See D147 and ADR-0014's amended consequences.
+
+            `type` is `https://salary-management.dev/errors/concurrent-salary-change`. It is set
+            rather than left `about:blank` because 409 is also reserved for a no-op change (I6),
+            and a client has to tell the two apart: one means reload, the other means the salary is
+            already that figure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         "422":
           description: The employee is TERMINATED, so their pay cannot change
           content:

@@ -1,5 +1,7 @@
 package com.acme.salarymanagement.employee.adapter.in.web;
 
+import java.net.URI;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,11 +28,21 @@ class ProblemHandler {
         return problem(HttpStatus.NOT_FOUND, "No such employee", missing.getMessage());
     }
 
+    /**
+     * 409, not 422: nothing about the request was wrong, and repeating it unchanged is exactly what
+     * the caller must not do.
+     *
+     * <p>It carries a {@code type} rather than leaving it {@code about:blank}, because
+     * `04-API-DESIGN.md` reserves 409 for a different condition - a no-op change, I6, which returns
+     * 400 today and is documented to become 409 with the RFC 7807 work. Two unrelated conditions on
+     * one status with no `type` would be indistinguishable on the wire, and the screen behaves
+     * differently for each: a lost update means reload, a no-op means the salary is already that.
+     */
     @ExceptionHandler({ConcurrentSalaryChange.class})
     ProblemDetail somebodyElseChangedItFirst(ConcurrentSalaryChange lost) {
-        // 409, not 422: nothing about the request was wrong, and repeating it unchanged is exactly
-        // what the caller must not do. 04-API-DESIGN reserves 409 for this.
-        return problem(HttpStatus.CONFLICT, "This pay change was not applied", lost.getMessage());
+        ProblemDetail problem = problem(HttpStatus.CONFLICT, "This pay change was not applied", lost.getMessage());
+        problem.setType(URI.create("https://salary-management.dev/errors/concurrent-salary-change"));
+        return problem;
     }
 
     @ExceptionHandler({IllegalStateException.class})
