@@ -3,136 +3,125 @@
 > Written at the end of each session by `/wrap`, read at the start of each by `/prime`.
 > Hand-written, so `git log` wins any disagreement.
 
-**Last updated:** 2026-09-11, end of Day 2
+**Last updated:** 2026-09-12, end of the Day 2 session and the start of Day 3
 
 ## Position
 
-**Day 2 is functionally complete and deployed, with two named gaps.** Tasks 2.1–2.9, 2.11–2.14
-are done. `PLAN.md` 2.10 is **partial** and 2.15 is **not started** — see Blockers.
+**Day 2 is complete. Day 3 has started: the KPI query is built and measured, the dashboard screen
+is not.** `PLAN.md` 2.1–2.14 are done, including 2.10 in full. 2.15 is still blocked. Of Day 3,
+3.2's query and endpoint are done; 3.1 was absorbed into V5.
 
-There is a working, deployed, authenticated product with 10,000 employees in it. Sign in at
+There is a working, deployed, authenticated product: sign in at
 https://salary-management-ui-5bp6.onrender.com as `hr.manager@acme.example` / `demo-password`,
-browse the directory, open a person, change their pay, watch the audit log record it.
+browse 10,000 employees, open one, change their pay, watch the audit log record it.
+`GET /api/v1/dashboard/summary` returns the four KPI cards from a single query, but **nothing
+renders them yet.**
 
-184 unit tests + 76 integration tests + 29 Angular specs, all green. 11 ArchUnit rules. CI green
-on every push today.
+176 unit tests + 85 integration tests + 29 Angular specs, all green. 11 ArchUnit rules. CI green on
+every push. `main` is in sync with `origin/main` at `01e34a0`.
+
+Unit tests dropped 186 → 176 deliberately: exactly the ten `Money.convertTo` tests, deleted with
+the method under D136. Nothing else went with them.
 
 ## Landed today
 
-Twenty commits, `5dfe3b9` through `d67c54f` (the previous session ended at `599652b`):
+Twenty-six commits, `5dfe3b9` through `01e34a0`. The Day 2 build is listed in the previous status
+file; this session added:
 
-- `feat: add employee schema` — V2: app_user, employee, application-assigned uuids, no defaults
-- `feat: add append-only salary revision log` — V3, the `salary_app` role, insert-only grants
-- `fix: trace revision check constraints to the invariants they mirror`
-- `fix: make the application connect as the restricted role`
-- `test: verify salary revisions are append-only at the database`
-- `fix: enforce the positive-salary invariant in the aggregate`
-- `feat: grant each table in the migration that creates it`
-- `docs: correct an overstated claim about what caught the pool misconfiguration`
-- `docs: record the seed privilege ruling and two gate findings`
-- `feat: list employees through a paginated directory endpoint` — the first vertical slice
-- `feat: seed ten thousand employees over a privileged pool` — 10,000 in 1,418 ms
-- `feat: add employee directory screen`
-- `fix: make the directory test independent of what else is in the database`
-- `test: count statements for real, and make CLAUDE.md true again`
-- `feat: page the directory by cursor, with filters and search` — keyset, openapi.yaml born
-- `fix: refuse to start when a pool has the wrong database identity`
-- `feat: change salary and read the audit log through the api`
-- `feat: add jwt authentication and role-based authorisation`
-- `perf: add directory and dashboard indexes` — V4 plus `docs/evidence/`
-- `feat: add login, employee detail and the change-salary dialog`
+- `docs: update session status` — the Day 2 handoff
+- `docs: record decision on jdbctemplate everywhere and jpa on a read path` — **ADR-0014**
+- `docs: record eleven decisions from day two` — D121–D131, and D120 marked withdrawn
+- `feat: seed salary bands, exchange rates and thirty thousand revisions` — finishes 2.10
+- `feat: add the payroll summary in one round trip` — **3.2**, plus D135–D137 and the D039 deletion
 
 ## Uncommitted
 
-_(none — working tree clean, `main` in sync with `origin/main`)_
+_(none — working tree clean)_
 
 ## Blockers
 
-**1. Render free tier cold start exceeds two minutes.** The first request after the service has
-been idle returned nothing at all — `curl` gave up at 120 s with HTTP 000. The request immediately
-after it returned 200 in 1.3 s. So the deployment is not down, but anyone opening the demo link
-cold sees a hang, and a demo video recorded without warming it up first will show one. Warm the API
-with `curl .../actuator/health` before demoing or recording. This is the free plan's spin-down; the
-only real fixes are a paid plan or a keep-alive ping.
+**1. The dashboard has no screen.** This is the single most important item and it is the last thing
+standing between the build and a complete submission. The query works, is measured, and is covered
+by eight integration tests; there is no Angular feature reading it.
 
-**2. Credentials were pasted into a chat transcript and must be rotated.** The Render API key and
-the Neon database password were both shared in conversation today to fix the deploy. Rotate both:
-Render → Account Settings → API Keys; Neon → reset the role password, then update
-`SPRING_DATASOURCE_PASSWORD` on the API service. Neither is in the repository.
+**2. Two concurrent pay changes both succeed.** There is no optimistic locking on the employee
+`UPDATE`, so two managers changing the same salary at once each write a revision, both carrying the
+same `previous_amount`, and the employee ends on whichever committed last. The audit log then
+describes a history that never happened. Fix is `WHERE current_salary = ?` on the `UPDATE` and a
+rejection when zero rows change — no ORM, no version column, about twenty minutes. Recorded in
+ADR-0014's consequences. **Do it after the dashboard renders, not before.**
 
-**3. `PLAN.md` 2.10 is partial.** The seed writes 10,000 employees and the two demo users. It does
-**not** write the ~30,000 salary revisions, the ~180 salary bands, or the FX table — and the FX
-table and `salary_band` table do not exist yet at all. Day 3's dashboard normalises six currencies
-through the FX table, so **3.2 cannot be built until those tables and their seed data exist.** That
-is the first thing that will block tomorrow.
+**3. Render free tier cold start exceeds two minutes.** The first request after idle returned
+nothing for 120 s; the next returned in 1.3 s. Warm the API with
+`curl https://salary-management-api-bv03.onrender.com/actuator/health` **before demoing or
+recording anything**, or the first two minutes of the video are a spinner.
 
-**4. `PLAN.md` 2.15 cannot be done yet.** It sets `failOnEmptyShould=true` "now that all five module
-packages exist". Three exist (`employee`, `band`, `identity`); `analytics`, `compensation` and
-`bulkimport` do not. `compensation` may never exist — D111 records why the change-salary use case
-lives in `employee` instead. Revisit 2.15 once `analytics` lands with 3.2.
+**4. Credentials shared in a chat transcript still need rotating.** The Render API key and the Neon
+database password. Neither is in the repository, but both are in a log.
 
-**5. The mutation gate has not run since Day 1.** `mvn -Pmutation test` was not run today, and the
-domain gained `Department` and `Employee.requirePositive` since. The 70% threshold is unverified
-against today's code.
+**5. `PLAN.md` 2.15 is still blocked.** It needs all five module packages to exist;
+`compensation` and `bulkimport` do not, and `compensation` may never — D111 records why the
+change-salary use case lives in `employee`. `analytics` now exists, so only two are missing.
 
-**6. Domain rejections return 400, not the documented 422/409.** Recorded as D112. Needs typed
-domain rejections rather than message-matching; belongs with the RFC 7807 work.
+**6. The mutation gate has not run since Day 1.** `mvn -Pmutation test`, threshold 70% on domain.
+The domain has gained `Department` and `requirePositive` and lost `Money.convertTo` since.
+
+**7. Domain rejections still return 400 where the API doc says 422/409** (D112).
 
 ## Decisions recorded
 
-Thirty rows, **D090–D119**. The ones that will matter tomorrow:
+**D090–D137**, forty-eight rows, plus **ADR-0014**. This session added D120 (withdrawn, pointing at
+the ADR), D121–D131 from the sweep, and D132–D137 from the seed and the KPI query.
 
-- **D091** — no column in the schema has a `DEFAULT`: not for identity, not for time.
-- **D092** — `Department` is an inline natural key, not a table. There is no department table.
-- **D094** — `salary_revision.id` is a uuid the adapter assigns, not a `BIGSERIAL`. Supersedes D079.
-- **D097 / D110** — the application connects as `salary_app` via `SET ROLE`, which is why the
-  datasource **must** be Neon's direct endpoint and never the `-pooler` one.
-- **D103** — the seed runs on its own unrestricted pool; `exchange_rate` and `salary_band` get
-  `SELECT` only at runtime. Build tomorrow's seeding accordingly.
-- **D108 / D109** — keyset paging satisfies ADR-0004; `totalApprox` is an exact count on the first
-  page only and absent thereafter.
-- **D111** — the change-salary use case lives in `employee`, not `compensation`.
-- **D117** — `ix_employee_filter` was specified, measured, and not shipped.
-- **D118** — the three shapes of vacuous gate, and the rule that a suite of refusals needs a
-  control that succeeds.
+Load-bearing for tomorrow:
 
-`Money.convertTo` is still on **probation (D039)**: the condition is "delete if it has no
-production caller by end of Day 3", and it still has none. 3.2 normalises in SQL (ADR-0013), so it
-probably still will not. **Settle it tomorrow rather than letting the deadline pass silently.**
+- **ADR-0014** — every adapter is `JdbcTemplate`; JPA is demonstrated on a **read** path after the
+  dashboard ships. The reason is not preference: dirty checking is an ambient write path, and a
+  managed `Employee` would flush a salary change with no revision, below every guard in the system.
+  It supersedes the write half of ADR-0005; `03-ARCHITECTURE` §7 was wrong and is corrected.
+- **D135** — money percentiles use `percentile_disc`, never `percentile_cont`. Applies to 3.4.
+- **D137** — per-row FX conversion in SQL is exact; ADR-0013 still holds and the drift is measured
+  at zero.
+- **D132/D133** — FX rates are seeded by the migration; revisions are produced by `changeSalaryTo`.
+- **D103** — the seed runs on its own pool; `salary_band` and `exchange_rate` are `SELECT`-only at
+  runtime.
+
+**No rows remain on probation.** D039 was settled by deleting `Money.convertTo` (D136).
 
 ## Next action
 
-`PLAN.md` task 3.1 — "Flyway V4: `salary_band`, `exchange_rate`, seeded FX rates", except that the
-migration is now **V5** (V4 is the index migration that landed today). Then 3.2, the four-KPI
-single-round-trip query, which is the primary deliverable and a deep-review task.
+`PLAN.md` task 3.6 — the dashboard screen: four KPI cards and the four filters, wired to
+`GET /api/v1/dashboard/summary`, in the same standalone / OnPush / signals / facade pattern as the
+directory, with specs queried through headings and aria-labels.
 
-Do 2.10's remaining half first — bands, FX and revisions in the seed — or 3.2 has no data to
-aggregate.
+Then 3.3 and 3.4 (breakdown and distribution), then the optimistic-locking fix, then the JPA
+read-path slice, then Playwright, README, k6 and the video.
+
+**The video gets 45 minutes tomorrow morning, with the API warmed first.**
 
 ## Gotchas
 
-- **Builds need `JAVA_HOME=$HOME/.jdks/jdk-21`.** Node 22 is at `~/.nodejs/current/bin`. Neither is
-  on the default `PATH`.
-- **Spotless deletes an import the moment nothing uses it.** Adding an import in one edit and the
-  code that uses it in the next means `spotless:apply` removes the import in between. Cost three
-  cycles on one ArchUnit rule today. Add both in the same edit, and compile before formatting.
+- **Builds need `JAVA_HOME=$HOME/.jdks/jdk-21`.** Node 22 is at `~/.nodejs/current/bin`.
+- **Spotless deletes an import the moment nothing uses it.** Add an import and its first use in the
+  same edit, and compile before formatting — this cost three cycles on one ArchUnit rule.
+- **PMD's `GuardLogStatement` fires on any log argument that is a method call.** Hoist it into a
+  local first. It has now failed the build three times, always on a seed runner's log line.
 - **`mvn clean` after deleting anything under `src/main/resources`.** Maven does not prune
-  `target/classes`, so a deleted migration kept running and reddened a green build.
-- **A bare `? IS NULL` is rejected by PostgreSQL** — "could not determine data type of parameter".
-  Every optional filter needs `CAST(:param AS text) IS NULL`.
+  `target/classes`.
+- **A bare `? IS NULL` is rejected by PostgreSQL.** Optional filters need `CAST(:p AS text) IS NULL`.
 - **A `@SpringBootTest` on a subclass replaces the parent's `properties`, it does not merge.**
-  `EmployeeSeedIT` lost the JWT secret that way and failed to load its context.
-- **The Testcontainers database is shared by the whole suite and the app role cannot delete.** No
-  test may assume an empty table; assert relative to a baseline, or clean up with the seed pool.
-- **`ng serve` does not pick up new files in `public/` without a restart.**
-- **Angular templates read `@` as control flow.** An email address in template text must be
-  `&#64;`, or the build fails with a confusing parse error.
-- **Applying a migration by hand and then letting Flyway run it fails.** If you `psql` a migration
-  into the local database, delete the objects *and* the `flyway_schema_history` row before starting
-  the app.
-- **PMD fires on things Checkstyle does not**: literals in `if`, unguarded log statements,
-  `ResultSet.next()` without checking its return. It is the gate most likely to fail a commit.
-- **Render deploys take ~3.5 minutes for the API, ~1.5 for the static site**, and auto-deploy fires
-  on every push regardless of CI.
-- **Evidence method worth reusing**: capture a "before" plan with
-  `BEGIN; DROP INDEX …; EXPLAIN (ANALYZE, BUFFERS) …; ROLLBACK;` — truthful, and nothing is rebuilt.
+- **The Testcontainers database is shared and the app role has no `DELETE`.** No test may assume an
+  empty table, and no test may clean up by deleting employees — assert relative to a baseline, or
+  pin assertions to a value nothing else generates.
+- **Any test that calls a use case needs `@WithMockUser`**, because authorisation is at the use-case
+  layer. Four tests have failed this way; the error is
+  `AuthenticationCredentialsNotFoundException`.
+- **Applying a migration by hand and then letting Flyway run it fails.** Delete the objects *and* the
+  `flyway_schema_history` row first.
+- **`ng serve` does not pick up new files in `public/` without a restart**, and Angular templates
+  read `@` as control flow — an email address in template text must be `&#64;`.
+- **Render auto-deploys on every push regardless of CI**, ~3.5 min for the API, ~1.5 for the site.
+- **Never point the datasource at Neon's `-pooler` host** (D110). `SET ROLE` leaks between clients
+  and Flyway fails with `permission denied for table flyway_schema_history`.
+- **Capture a "before" query plan with `BEGIN; DROP INDEX …; EXPLAIN …; ROLLBACK;`** — truthful, and
+  nothing is rebuilt.

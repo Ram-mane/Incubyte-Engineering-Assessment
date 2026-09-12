@@ -130,6 +130,35 @@ somebody remembering to protect it.
 Who made a pay change is taken from the token's subject and never from the request body. A caller
 who could name somebody else as the author of a change could launder one through the audit log.
 
+## A float that nearly reached the payroll median
+
+The KPI query in the data model specified `percentile_cont` for the median salary, which is the
+obvious choice and is what most examples use. Against the seeded ten thousand it returns:
+
+```
+    cont_median     |     disc_median
+--------------------+---------------------
+ 113930.00993500001 | 113923.942020000000
+```
+
+`percentile_cont` interpolates between two values, so PostgreSQL cannot keep it in `numeric` and
+returns **`double precision`**. That trailing `...00993500001` is float error, in a payroll figure,
+in a codebase whose first non-negotiable rule is that money is never a binary floating point number.
+
+`percentile_disc` returns `numeric`, exactly, and returns an amount somebody is actually paid —
+which for a *median salary* is the more truthful answer as well as the exact one: there is a real
+person on 113,923.94, and nobody is on 113,930.0099350000​1.
+
+It was caught by checking `pg_typeof` on the aggregate before writing the Java, rather than by
+noticing odd digits on a dashboard later. The same rule applies to the p25/p75/p90 distributions
+([D135](docs/DECISIONS.md)), and `docs/evidence/08-kpi-summary.txt` has the plans and the types.
+
+While checking that, the same file records a second measurement: ADR-0013 prohibits converting each
+amount separately, because `Money.convertTo` rounds to the currency's scale on every call. In SQL
+that concern does not apply — `numeric` multiplication is exact and nothing rounds until the end —
+and summing per currency then converting gives `1213179157.200437000000`, identical to converting
+per row, drift exactly zero. The rule survived; the reason it exists turned out to be a Java one.
+
 ## Pagination, and the evidence it works
 
 The directory is keyset-paged, not `OFFSET`-paged: a page is a place to resume from, given as an
