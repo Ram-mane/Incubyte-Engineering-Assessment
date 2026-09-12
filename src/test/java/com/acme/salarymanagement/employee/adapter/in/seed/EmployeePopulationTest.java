@@ -3,10 +3,12 @@ package com.acme.salarymanagement.employee.adapter.in.seed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.acme.salarymanagement.employee.domain.Employee;
+import com.acme.salarymanagement.employee.domain.UserId;
 
 /**
  * The seed is data three different things depend on agreeing about: the demo, the tests and the
@@ -70,6 +72,31 @@ class EmployeePopulationTest {
         assertThat(EmployeePopulation.of(TEN_THOUSAND))
                 .allSatisfy(employee ->
                         assertThat(employee.currentSalary().isPositive()).isTrue());
+    }
+
+    @Test
+    void everyone_has_a_history_and_every_entry_of_it_was_made_by_the_aggregate() {
+        var org = EmployeePopulation.withHistory(
+                200, new UserId(UUID.fromString("00000000-0000-4000-8000-00000000ffff")));
+
+        assertThat(org.revisions()).hasSizeGreaterThanOrEqualTo(200 * 2);
+        assertThat(org.revisions())
+                .as("a revision that does not move the salary is one changeSalaryTo would refuse")
+                .allSatisfy(revision -> assertThat(revision.newAmount()).isNotEqualTo(revision.previousAmount()));
+    }
+
+    @Test
+    void an_employees_final_salary_is_where_their_own_history_ended() {
+        var org =
+                EmployeePopulation.withHistory(50, new UserId(UUID.fromString("00000000-0000-4000-8000-00000000ffff")));
+        var first = org.employees().get(0);
+        var theirs = org.revisions().stream()
+                .filter(revision -> revision.employeeId().equals(first.id()))
+                .toList();
+
+        assertThat(first.currentSalary())
+                .as("the figure and the history that explains it must be the same story")
+                .isEqualTo(theirs.get(theirs.size() - 1).newAmount());
     }
 
     private static List<String> describe(List<Employee> population) {

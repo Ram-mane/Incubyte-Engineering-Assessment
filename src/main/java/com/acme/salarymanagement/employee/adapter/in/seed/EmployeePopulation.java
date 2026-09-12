@@ -3,6 +3,7 @@ package com.acme.salarymanagement.employee.adapter.in.seed;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -10,12 +11,15 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import com.acme.salarymanagement.employee.domain.ChangeReason;
 import com.acme.salarymanagement.employee.domain.EmailAddress;
 import com.acme.salarymanagement.employee.domain.Employee;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
 import com.acme.salarymanagement.employee.domain.EmployeeNumber;
 import com.acme.salarymanagement.employee.domain.EmploymentStatus;
 import com.acme.salarymanagement.employee.domain.PersonName;
+import com.acme.salarymanagement.employee.domain.SalaryRevision;
+import com.acme.salarymanagement.employee.domain.UserId;
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.Department;
 import com.acme.salarymanagement.shared.JobTitle;
@@ -98,19 +102,66 @@ final class EmployeePopulation {
             "SG", List.of("70000", "95000", "125000", "155000", "190000"),
             "AU", List.of("80000", "105000", "135000", "165000", "200000"));
 
+    private static final ChangeReason[] REASONS = ChangeReason.values();
+
     private static final List<CountryCode> COUNTRIES = List.of("IN", "US", "DE", "GB", "SG", "AU").stream()
             .map(CountryCode::new)
             .toList();
 
     private EmployeePopulation() {}
 
+    /** An org, and the history of how everyone in it came to be paid what they are paid. */
+    record Org(List<Employee> employees, List<SalaryRevision> revisions) {}
+
     static List<Employee> of(int size) {
+        return withHistory(size, null).employees();
+    }
+
+    /**
+     * Generates the org and then walks it forward through two to four pay changes each.
+     *
+     * <p>The revisions are produced by {@code changeSalaryTo}, not written by this class. That is
+     * the point: the seeder cannot manufacture an audit record any more than the rest of the system
+     * can, so thirty thousand seeded revisions are thirty thousand the domain agreed to. It also
+     * means each employee's final salary is the one their own history arrives at, rather than a
+     * figure with a history invented around it.
+     *
+     * @param actor the user credited with the changes; when null, no history is generated
+     */
+    static Org withHistory(int size, UserId actor) {
         Random random = new Random(FIXED_SEED);
         List<Employee> employees = new ArrayList<>(size);
+        List<SalaryRevision> revisions = new ArrayList<>(size * 3);
+
         for (int index = 0; index < size; index++) {
-            employees.add(anEmployee(index, random));
+            Employee employee = anEmployee(index, random);
+            employees.add(employee);
+            if (actor != null) {
+                raiseRepeatedly(employee, actor, random, revisions);
+            }
         }
-        return employees;
+        return new Org(employees, revisions);
+    }
+
+    private static void raiseRepeatedly(
+            Employee employee, UserId actor, Random random, List<SalaryRevision> revisions) {
+        int changes = 2 + random.nextInt(3);
+        for (int change = changes; change > 0; change--) {
+            // Between four and eleven percent, as integer percentage points: a rise anybody would
+            // recognise, and never a float anywhere near a salary (D105).
+            BigDecimal step = BigDecimal.valueOf(104L + random.nextInt(8), 2);
+            Money raised = Money.of(
+                    employee.currentSalary().amount().multiply(step).setScale(2, RoundingMode.HALF_EVEN),
+                    employee.currentSalary().currency());
+            revisions.add(employee.changeSalaryTo(
+                    raised,
+                    REASONS[random.nextInt(REASONS.length)],
+                    actor,
+                    null,
+                    // Counted back from a fixed date, so the same seed produces the same history
+                    // next year. Nothing here reads a clock.
+                    REFERENCE_DATE.minusMonths(change * 9L).atStartOfDay().toInstant(ZoneOffset.UTC)));
+        }
     }
 
     private static Employee anEmployee(int index, Random random) {

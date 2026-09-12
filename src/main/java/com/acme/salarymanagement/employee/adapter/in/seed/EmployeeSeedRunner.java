@@ -13,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.acme.salarymanagement.employee.application.port.in.StoreEmployees;
+import com.acme.salarymanagement.employee.domain.UserId;
 
 /**
  * {@code mvn spring-boot:run -Dspring-boot.run.profiles=seed} - fills an empty database with an
@@ -29,6 +30,10 @@ class EmployeeSeedRunner implements ApplicationRunner {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmployeeSeedRunner.class);
 
+    /** Matches DemoUserSeedRunner's fixed id, so a seeded revision names a user that exists. */
+    private static final java.util.UUID SEEDED_MANAGER =
+            java.util.UUID.fromString("00000000-0000-4000-8000-00000000ffff");
+
     private final StoreEmployees employees;
     private final int size;
 
@@ -44,8 +49,12 @@ class EmployeeSeedRunner implements ApplicationRunner {
 
     void seed(int count) {
         Instant startedAt = Instant.now();
-        employees.replaceEveryoneWith(EmployeePopulation.of(count));
+        // Credited to the seeded HR manager, who exists because DemoUserSeedRunner runs first:
+        // changed_by is NOT NULL with a foreign key, and there is no system user to invent.
+        EmployeePopulation.Org org = EmployeePopulation.withHistory(count, new UserId(SEEDED_MANAGER));
+        employees.replaceEveryoneWith(org.employees(), org.revisions());
         long tookMillis = Duration.between(startedAt, Instant.now()).toMillis();
-        LOG.info("Seeded {} employees in {} ms", count, tookMillis);
+        int recorded = org.revisions().size();
+        LOG.info("Seeded {} employees and {} revisions in {} ms", count, recorded, tookMillis);
     }
 }

@@ -2,8 +2,10 @@ package com.acme.salarymanagement.employee.adapter.out.persistence;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import com.acme.salarymanagement.employee.application.port.out.EmployeeWriteRepository;
 import com.acme.salarymanagement.employee.domain.Employee;
+import com.acme.salarymanagement.employee.domain.SalaryRevision;
 
 /**
  * Bulk insert over the seed pool. JDBC batches, not Hibernate: ten thousand entities through a
@@ -33,6 +36,13 @@ class EmployeeBatchJdbcAdapter implements EmployeeWriteRepository {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
+    private static final String INSERT_REVISION =
+            """
+            INSERT INTO salary_revision (id, employee_id, previous_amount, new_amount, currency_code,
+                                         change_reason, changed_by, changed_at, note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
     private final JdbcTemplate jdbc;
 
     EmployeeBatchJdbcAdapter(@Qualifier("seedJdbcTemplate") JdbcTemplate seedJdbcTemplate) {
@@ -44,6 +54,37 @@ class EmployeeBatchJdbcAdapter implements EmployeeWriteRepository {
         for (int from = 0; from < employees.size(); from += BATCH_SIZE) {
             insert(employees.subList(from, Math.min(from + BATCH_SIZE, employees.size())));
         }
+    }
+
+    @Override
+    public void appendAll(List<SalaryRevision> revisions) {
+        for (int from = 0; from < revisions.size(); from += BATCH_SIZE) {
+            insertRevisions(revisions.subList(from, Math.min(from + BATCH_SIZE, revisions.size())));
+        }
+    }
+
+    private void insertRevisions(List<SalaryRevision> batch) {
+        jdbc.batchUpdate(INSERT_REVISION, new BatchPreparedStatementSetter() {
+
+            @Override
+            public void setValues(PreparedStatement statement, int index) throws SQLException {
+                SalaryRevision revision = batch.get(index);
+                statement.setObject(1, UUID.randomUUID());
+                statement.setObject(2, revision.employeeId().value());
+                statement.setBigDecimal(3, revision.previousAmount().amount());
+                statement.setBigDecimal(4, revision.newAmount().amount());
+                statement.setString(5, revision.newAmount().currency().code());
+                statement.setString(6, revision.reason().name());
+                statement.setObject(7, revision.changedBy().value());
+                statement.setTimestamp(8, Timestamp.from(revision.changedAt()));
+                statement.setString(9, revision.note());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return batch.size();
+            }
+        });
     }
 
     @Override

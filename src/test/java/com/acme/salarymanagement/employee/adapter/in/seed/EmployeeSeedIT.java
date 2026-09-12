@@ -7,11 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.acme.salarymanagement.employee.application.port.in.DirectoryFilters;
+import com.acme.salarymanagement.employee.application.port.in.GetSalaryRevisions;
 import com.acme.salarymanagement.employee.application.port.out.EmployeeDirectoryRepository;
 import com.acme.salarymanagement.employee.application.port.out.EmployeeWriteRepository;
+import com.acme.salarymanagement.employee.domain.EmployeeId;
 import com.acme.salarymanagement.support.PostgresIntegrationTest;
 
 /**
@@ -24,6 +27,8 @@ import com.acme.salarymanagement.support.PostgresIntegrationTest;
 @ActiveProfiles("seed")
 @SpringBootTest(properties = {"seed.employees=25", "security.jwt.secret=test-signing-key-long-enough-to-be-usable"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+// Reading the revision log goes through an authorised use case, so this test says who it is.
+@WithMockUser(roles = "HR_MANAGER")
 class EmployeeSeedIT extends PostgresIntegrationTest {
 
     @Autowired
@@ -31,6 +36,9 @@ class EmployeeSeedIT extends PostgresIntegrationTest {
 
     @Autowired
     private EmployeeWriteRepository employees;
+
+    @Autowired
+    private GetSalaryRevisions revisions;
 
     /**
      * The container is shared by the whole suite, and these rows are committed rather than rolled
@@ -40,6 +48,19 @@ class EmployeeSeedIT extends PostgresIntegrationTest {
     @AfterAll
     void the_seeded_org_does_not_outlive_this_test() {
         employees.deleteEveryone();
+    }
+
+    @Test
+    void every_seeded_employee_has_a_history_the_domain_agreed_to() {
+        // The revisions are produced by changeSalaryTo, so the seed cannot manufacture an audit
+        // record any more than the rest of the system can.
+        assertThat(revisions.of(
+                        new EmployeeId(directory
+                                .findPage(DirectoryFilters.none(), null, null, 1)
+                                .get(0)
+                                .id()),
+                        50))
+                .isNotEmpty();
     }
 
     @Test
