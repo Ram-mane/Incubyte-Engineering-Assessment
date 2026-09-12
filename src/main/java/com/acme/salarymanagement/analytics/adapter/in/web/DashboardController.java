@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.acme.salarymanagement.analytics.application.port.in.BreakdownDimension;
 import com.acme.salarymanagement.analytics.application.port.in.DashboardFilters;
+import com.acme.salarymanagement.analytics.application.port.in.DistributionDimension;
 import com.acme.salarymanagement.analytics.application.port.in.GetPayrollBreakdown;
 import com.acme.salarymanagement.analytics.application.port.in.GetPayrollSummary;
+import com.acme.salarymanagement.analytics.application.port.in.GetSalaryDistribution;
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
 import com.acme.salarymanagement.shared.Department;
@@ -22,10 +24,13 @@ class DashboardController {
 
     private final GetPayrollSummary summaries;
     private final GetPayrollBreakdown breakdowns;
+    private final GetSalaryDistribution distributions;
 
-    DashboardController(GetPayrollSummary summaries, GetPayrollBreakdown breakdowns) {
+    DashboardController(
+            GetPayrollSummary summaries, GetPayrollBreakdown breakdowns, GetSalaryDistribution distributions) {
         this.summaries = summaries;
         this.breakdowns = breakdowns;
+        this.distributions = distributions;
     }
 
     @GetMapping("/summary")
@@ -56,6 +61,21 @@ class DashboardController {
         DashboardFilters filters = filtersFrom(country, department, jobTitle, level, currency);
         return PayrollBreakdownResponse.of(
                 breakdowns.by(groupBy, filters), filters.reportingCurrency().code());
+    }
+
+    /** How pay is spread inside a peer group: quartiles and range per role or department. */
+    @GetMapping("/distribution")
+    SalaryDistributionResponse distribution(
+            @RequestParam DistributionDimension groupBy,
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String jobTitle,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String currency) {
+
+        DashboardFilters filters = filtersFrom(country, department, jobTitle, level, currency);
+        return SalaryDistributionResponse.of(
+                distributions.by(groupBy, filters), filters.reportingCurrency().code());
     }
 
     private static DashboardFilters filtersFrom(

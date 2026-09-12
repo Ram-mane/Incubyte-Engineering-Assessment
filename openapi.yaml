@@ -311,6 +311,48 @@ paths:
         "400":
           description: groupBy missing, or naming a dimension that does not exist
 
+  /dashboard/distribution:
+    get:
+      summary: How pay is spread inside a peer group
+      description: |
+        Lowest, p25, median, p75, p90 and highest per job title or department, for everyone matching
+        the filters, normalised through the seeded FX table.
+
+        Every figure is `percentile_disc`, so every figure is an amount somebody in the group is
+        actually paid. `percentile_cont` interpolates and PostgreSQL returns it as
+        `double precision`: a p75 of 137,499.9987 is both a float in a payroll figure and a number
+        nobody can act on.
+
+        Groups come back widest-spread first - the reason to read this is to find where pay is least
+        consistent - with the group name as a deterministic tiebreak.
+
+        `groupBy` here is a smaller set than the breakdown's, deliberately: a country is not a peer
+        group, so `?groupBy=country` is a 400 on this endpoint.
+      operationId: salaryDistribution
+      parameters:
+        - name: groupBy
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/DistributionDimension' }
+        - { name: country, in: query, required: false, schema: { type: string, minLength: 2, maxLength: 2 } }
+        - { name: department, in: query, required: false, schema: { type: string } }
+        - { name: jobTitle, in: query, required: false, schema: { type: string } }
+        - { name: level, in: query, required: false, schema: { $ref: '#/components/schemas/SeniorityLevel' } }
+        - name: currency
+          in: query
+          required: false
+          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          schema: { type: string, minLength: 3, maxLength: 3, default: USD }
+      responses:
+        "200":
+          description: One row per group that has at least one employee in it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryDistribution'
+        "400":
+          description: groupBy missing, or naming a dimension this endpoint has no meaning for
+
   /employees/filter-options:
     get:
       summary: What there is to filter the directory by
@@ -450,6 +492,48 @@ components:
           type: string
           format: date
           description: The date whose exchange rates every figure above was converted through.
+          example: "2026-09-01"
+
+    DistributionDimension:
+      type: string
+      description: |
+        What a distribution groups by. Read case-insensitively; returned in camel case. Narrower
+        than BreakdownDimension on purpose - a country is not a peer group.
+      enum: [jobTitle, department]
+
+    SalaryDistribution:
+      type: object
+      required: [groupedBy, groups, reportingCurrency, ratesAsOf]
+      properties:
+        groupedBy:
+          $ref: '#/components/schemas/DistributionDimension'
+        groups:
+          type: array
+          description: Widest spread first, group name as the tiebreak. Empty when nobody matches.
+          items:
+            type: object
+            required: [name, headcount, lowest, p25, median, p75, p90, highest]
+            properties:
+              name: { type: string, example: Software Engineer }
+              headcount: { type: integer, format: int64, example: 4 }
+              lowest:
+                $ref: '#/components/schemas/Money'
+              p25:
+                $ref: '#/components/schemas/Money'
+              median:
+                $ref: '#/components/schemas/Money'
+              p75:
+                $ref: '#/components/schemas/Money'
+              p90:
+                $ref: '#/components/schemas/Money'
+              highest:
+                $ref: '#/components/schemas/Money'
+        reportingCurrency:
+          type: string
+          example: USD
+        ratesAsOf:
+          type: string
+          format: date
           example: "2026-09-01"
 
     DirectoryFilterOptions:

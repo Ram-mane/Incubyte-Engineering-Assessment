@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { MoneyPipe } from '../../shared/money.pipe';
 import { DashboardFacade } from './dashboard.facade';
-import { BreakdownDimension } from './dashboard.model';
+import { BreakdownDimension, DistributionDimension, DistributionGroup } from './dashboard.model';
 
 /**
  * The four KPI cards and the filters that move them.
@@ -41,6 +41,11 @@ export class DashboardComponent implements OnInit {
   protected readonly dashboard = inject(DashboardFacade);
 
   protected readonly dimensions: readonly BreakdownDimension[] = ['department', 'country', 'level'];
+  /** Role first: it is the peer group an HR manager compares within. Country is not one. */
+  protected readonly spreadDimensions: readonly { value: DistributionDimension; label: string }[] = [
+    { value: 'jobTitle', label: 'Role' },
+    { value: 'department', label: 'Department' },
+  ];
 
   protected readonly country = signal('');
   protected readonly department = signal('');
@@ -71,6 +76,15 @@ export class DashboardComponent implements OnInit {
     return `${Math.round((Number(spend) / largest) * 10000) / 100}%`;
   }
 
+  /** Where a group's interquartile box starts, as a share of its own lowest-to-highest range. */
+  protected iqrLeft(group: DistributionGroup): string {
+    return `${share(group, group.p25)}%`;
+  }
+
+  protected iqrWidth(group: DistributionGroup): string {
+    return `${round(share(group, group.p75) - share(group, group.p25))}%`;
+  }
+
   protected clear(): void {
     this.country.set('');
     this.department.set('');
@@ -78,4 +92,20 @@ export class DashboardComponent implements OnInit {
     this.level.set('');
     this.apply();
   }
+}
+
+/** How far an amount sits along a group's own range, 0 at the lowest and 100 at the highest. */
+function share(group: DistributionGroup, amount: { amount: string }): number {
+  const lowest = Number(group.lowest.amount);
+  const highest = Number(group.highest.amount);
+  const span = highest - lowest;
+  if (span <= 0) {
+    // Everybody in the group is on the same salary: there is no spread to draw.
+    return 0;
+  }
+  return round(((Number(amount.amount) - lowest) / span) * 100);
+}
+
+function round(percentage: number): number {
+  return Math.round(percentage * 100) / 100;
 }

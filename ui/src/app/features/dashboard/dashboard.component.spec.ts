@@ -4,7 +4,14 @@ import { of, throwError } from 'rxjs';
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { DashboardComponent } from './dashboard.component';
-import { BreakdownDimension, DashboardQuery, PayrollBreakdown, PayrollSummary } from './dashboard.model';
+import {
+  BreakdownDimension,
+  DashboardQuery,
+  DistributionDimension,
+  PayrollBreakdown,
+  PayrollSummary,
+  SalaryDistribution,
+} from './dashboard.model';
 
 const populated: PayrollSummary = {
   headcount: 9_842,
@@ -58,6 +65,26 @@ const byDepartment: PayrollBreakdown = {
 };
 
 const noGroups: PayrollBreakdown = { ...byDepartment, groups: [] };
+
+const money = (amount: string) => ({ amount, currency: 'USD' });
+
+const byRole: SalaryDistribution = {
+  groupedBy: 'jobTitle',
+  groups: [
+    {
+      name: 'Software Engineer',
+      headcount: 1_240,
+      lowest: money('62000.00'),
+      p25: money('98000.00'),
+      median: money('124000.00'),
+      p75: money('151000.00'),
+      p90: money('178000.00'),
+      highest: money('240000.00'),
+    },
+  ],
+  reportingCurrency: 'USD',
+  ratesAsOf: '2026-09-01',
+};
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -113,11 +140,16 @@ describe('DashboardComponent', () => {
   beforeEach(() => {
     asked = [];
     grouped = [];
-    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', [
+      'summary',
+      'breakdown',
+      'distribution',
+    ]);
     api.breakdown.and.callFake((dimension: BreakdownDimension) => {
       grouped.push(dimension);
       return of(dimension === 'department' ? byDepartment : { ...byDepartment, groupedBy: dimension });
     });
+    api.distribution.and.returnValue(of(byRole));
     employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
     employees.filterOptions.and.returnValue(
       of({
@@ -238,8 +270,13 @@ describe('DashboardComponent breakdown', () => {
 
   const render = async (breakdown: PayrollBreakdown = byDepartment) => {
     grouped = [];
-    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', [
+      'summary',
+      'breakdown',
+      'distribution',
+    ]);
     api.summary.and.returnValue(of(populated));
+    api.distribution.and.returnValue(of(byRole));
     api.breakdown.and.callFake((dimension: BreakdownDimension) => {
       grouped.push(dimension);
       return of(breakdown);
@@ -317,5 +354,98 @@ describe('DashboardComponent breakdown', () => {
     expect(bars[0].style.width).toBe('100%');
     expect(bars[1].style.width).toBe('17.74%');
     expect(bars[0].getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+describe('DashboardComponent distribution', () => {
+  let fixture: ComponentFixture<DashboardComponent>;
+  let element: HTMLElement;
+  let api: jasmine.SpyObj<DashboardApiService>;
+  let distributed: DistributionDimension[];
+
+  const render = async (distribution: SalaryDistribution = byRole) => {
+    distributed = [];
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', [
+      'summary',
+      'breakdown',
+      'distribution',
+    ]);
+    api.summary.and.returnValue(of(populated));
+    api.breakdown.and.returnValue(of(byDepartment));
+    api.distribution.and.callFake((dimension: DistributionDimension) => {
+      distributed.push(dimension);
+      return of(distribution);
+    });
+    const employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
+    employees.filterOptions.and.returnValue(
+      of({ countries: ['DE'], departments: ['Engineering'], jobTitles: ['Software Engineer'], levels: ['SENIOR'] }),
+    );
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        { provide: DashboardApiService, useValue: api },
+        { provide: EmployeeApiService, useValue: employees },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(DashboardComponent);
+    element = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+  };
+
+  const row = () => element.querySelector('table.dashboard__distribution tbody tr');
+
+  it('names the section for the question it answers', async () => {
+    await render();
+
+    expect(element.querySelector('h2#distribution-heading')?.textContent).toContain('How pay is spread');
+  });
+
+  it('shows the quartiles and the range of a role', async () => {
+    await render();
+
+    expect(row()?.textContent).toContain('Software Engineer');
+    expect(row()?.textContent).toContain('98,000');
+    expect(row()?.textContent).toContain('124,000');
+    expect(row()?.textContent).toContain('151,000');
+    expect(row()?.textContent).toContain('178,000');
+  });
+
+  it('groups by role until asked otherwise, because a role is the peer group', async () => {
+    await render();
+
+    expect(distributed).toEqual(['jobTitle']);
+  });
+
+  it('offers department but never country, which is not a peer group', async () => {
+    await render();
+
+    const options = Array.from(
+      element.querySelectorAll('[aria-label="Group the distribution by"] mat-button-toggle'),
+    ).map((t) => t.textContent?.trim());
+
+    expect(options).toEqual(['Role', 'Department']);
+  });
+
+  it('draws the interquartile range as a bar positioned within the group range', async () => {
+    await render();
+
+    const box = element.querySelector<HTMLElement>('.dashboard__iqr');
+
+    // 62,000 to 240,000 is the full width; p25 98,000 starts at 20.22% and p75 151,000 ends at
+    // 50.0%, so the box is 29.78% wide.
+    expect(box?.style.left).toBe('20.22%');
+    expect(box?.style.width).toBe('29.78%');
+    // Decoration - the figures are in the row beside it. Asserted as "hidden from assistive
+    // technology" rather than "carries the attribute", because hiding the track hides the bar
+    // inside it and either shape is correct.
+    expect(box?.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('says there is nothing to distribute rather than drawing an empty table', async () => {
+    await render({ ...byRole, groups: [] });
+
+    expect(element.textContent).toContain('No groups to show');
   });
 });

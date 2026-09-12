@@ -43,8 +43,15 @@ describe('DashboardFacade', () => {
 
   beforeEach(() => {
     asked = [];
-    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', ['summary', 'breakdown']);
+    api = jasmine.createSpyObj<DashboardApiService>('DashboardApiService', [
+      'summary',
+      'breakdown',
+      'distribution',
+    ]);
     api.breakdown.and.returnValue(of(breakdown('Engineering', 'Finance')));
+    api.distribution.and.returnValue(
+      of({ groupedBy: 'jobTitle' as const, groups: [], reportingCurrency: 'USD', ratesAsOf: '2026-09-01' }),
+    );
     employees = jasmine.createSpyObj<EmployeeApiService>('EmployeeApiService', ['filterOptions']);
     employees.filterOptions.and.returnValue(
       of({ countries: ['DE', 'IN'], departments: ['Engineering'], jobTitles: ['Software Engineer'], levels: ['SENIOR'] }),

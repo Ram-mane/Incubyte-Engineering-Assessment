@@ -3,7 +3,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { DirectoryFilterOptions } from '../../core/api/filter-options.model';
-import { BreakdownDimension, DashboardQuery, PayrollBreakdown, PayrollSummary } from './dashboard.model';
+import {
+  BreakdownDimension,
+  DashboardQuery,
+  DistributionDimension,
+  PayrollBreakdown,
+  PayrollSummary,
+  SalaryDistribution,
+} from './dashboard.model';
 
 /**
  * What the dashboard screen knows: what it is looking at, and the one answer that came back.
@@ -24,12 +31,16 @@ export class DashboardFacade {
   private readonly current = signal<PayrollSummary | null>(null);
   private readonly groups = signal<PayrollBreakdown | null>(null);
   private readonly groupedBy = signal<BreakdownDimension>('department');
+  private readonly spread = signal<SalaryDistribution | null>(null);
+  // A role is the peer group an HR manager compares within, so that is where this starts.
+  private readonly spreadBy = signal<DistributionDimension>('jobTitle');
   private readonly loading = signal(false);
   private readonly failed = signal(false);
   private readonly query = signal<DashboardQuery>({});
   /** Which request the screen is currently showing. Answers to older ones are dropped. */
   private inFlight = 0;
   private inFlightBreakdown = 0;
+  private inFlightDistribution = 0;
   private readonly options = signal<DirectoryFilterOptions>({
     countries: [],
     departments: [],
@@ -40,6 +51,8 @@ export class DashboardFacade {
   readonly summary = this.current.asReadonly();
   readonly breakdown = this.groups.asReadonly();
   readonly dimension = this.groupedBy.asReadonly();
+  readonly distribution = this.spread.asReadonly();
+  readonly distributionDimension = this.spreadBy.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly hasFailed = this.failed.asReadonly();
   readonly filters = this.query.asReadonly();
@@ -58,6 +71,12 @@ export class DashboardFacade {
     this.loadBreakdown(this.query());
   }
 
+  /** Look at the spread within a different kind of peer group. The cards do not depend on it. */
+  distributeBy(dimension: DistributionDimension): void {
+    this.spreadBy.set(dimension);
+    this.loadDistribution(this.query());
+  }
+
   load(query: DashboardQuery): void {
     // Two filter changes in quick succession can come back in either order, and the slower answer
     // is the older question. Painting it would put one filter's figures under another filter's
@@ -67,6 +86,7 @@ export class DashboardFacade {
     this.loading.set(true);
     this.failed.set(false);
     this.loadBreakdown(query);
+    this.loadDistribution(query);
     this.api.summary(query).subscribe({
       next: (summary) => {
         if (request !== this.inFlight) {
@@ -101,6 +121,22 @@ export class DashboardFacade {
           // The cards carry the "could not be loaded" message for the screen; a breakdown that
           // failed shows nothing rather than the previous filter's groups.
           this.groups.set(null);
+        }
+      },
+    });
+  }
+
+  private loadDistribution(query: DashboardQuery): void {
+    const request = ++this.inFlightDistribution;
+    this.api.distribution(this.spreadBy(), query).subscribe({
+      next: (distribution) => {
+        if (request === this.inFlightDistribution) {
+          this.spread.set(distribution);
+        }
+      },
+      error: () => {
+        if (request === this.inFlightDistribution) {
+          this.spread.set(null);
         }
       },
     });

@@ -48,3 +48,25 @@ export interface PayrollBreakdown {
   readonly reportingCurrency: string;
   readonly ratesAsOf: string;
 }
+
+/** What a distribution groups by. Narrower than a breakdown's: a country is not a peer group. */
+export type DistributionDimension = 'jobTitle' | 'department';
+
+export interface DistributionGroup {
+  readonly name: string;
+  readonly headcount: number;
+  readonly lowest: Money;
+  readonly p25: Money;
+  readonly median: Money;
+  readonly p75: Money;
+  readonly p90: Money;
+  readonly highest: Money;
+}
+
+/** Quartiles and range per group, widest spread first. Every figure is an amount somebody earns. */
+export interface SalaryDistribution {
+  readonly groupedBy: DistributionDimension;
+  readonly groups: readonly DistributionGroup[];
+  readonly reportingCurrency: string;
+  readonly ratesAsOf: string;
+}

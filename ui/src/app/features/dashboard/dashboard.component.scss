@@ -135,4 +135,58 @@
     background: #1a73e8;
     opacity: 0.5;
   }
+
+  &__distribution {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.6rem 0.5rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      font-weight: 400;
+    }
+
+    thead th {
+      font-size: 0.8125rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    tbody th {
+      width: 26%;
+    }
+  }
+
+  &__caption {
+    text-align: left;
+    caption-side: bottom;
+    padding-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  &__median {
+    font-weight: 500;
+  }
+
+  // The group's own lowest-to-highest range, with the middle half drawn inside it.
+  &__spread {
+    position: relative;
+    display: block;
+    height: 4px;
+    margin-top: 0.35rem;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  &__iqr {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 2px;
+    background: #1a73e8;
+    opacity: 0.55;
+  }
 }

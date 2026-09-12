@@ -20,10 +20,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.acme.salarymanagement.analytics.application.port.in.BreakdownDimension;
 import com.acme.salarymanagement.analytics.application.port.in.DashboardFilters;
+import com.acme.salarymanagement.analytics.application.port.in.DistributionDimension;
 import com.acme.salarymanagement.analytics.application.port.in.GetPayrollBreakdown;
 import com.acme.salarymanagement.analytics.application.port.in.GetPayrollSummary;
+import com.acme.salarymanagement.analytics.application.port.in.GetSalaryDistribution;
 import com.acme.salarymanagement.analytics.application.port.in.PayrollBreakdown;
 import com.acme.salarymanagement.analytics.application.port.in.PayrollSummary;
+import com.acme.salarymanagement.analytics.application.port.in.SalaryDistribution;
 import com.acme.salarymanagement.shared.CurrencyCode;
 import com.acme.salarymanagement.shared.Money;
 
@@ -44,6 +47,7 @@ class DashboardControllerTest {
 
     static final AtomicReference<BreakdownDimension> LAST_DIMENSION = new AtomicReference<>();
     static final AtomicReference<DashboardFilters> LAST_FILTERS = new AtomicReference<>();
+    static final AtomicReference<DistributionDimension> LAST_DISTRIBUTION = new AtomicReference<>();
 
     @Autowired
     private MockMvc mvc;
@@ -97,6 +101,37 @@ class DashboardControllerTest {
                 .isEqualTo("EUR");
     }
 
+    @Test
+    void a_distribution_names_its_quartiles_and_its_range() throws Exception {
+        mvc.perform(get("/api/v1/dashboard/distribution?groupBy=jobTitle"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupedBy").value("jobTitle"))
+                .andExpect(jsonPath("$.groups[0].name").value("Software Engineer"))
+                .andExpect(jsonPath("$.groups[0].headcount").value(4))
+                .andExpect(jsonPath("$.groups[0].lowest.amount").value("100000.00"))
+                .andExpect(jsonPath("$.groups[0].p25.amount").value("100000.00"))
+                .andExpect(jsonPath("$.groups[0].median.amount").value("200000.00"))
+                .andExpect(jsonPath("$.groups[0].p75.amount").value("300000.00"))
+                .andExpect(jsonPath("$.groups[0].p90.amount").value("400000.00"))
+                .andExpect(jsonPath("$.groups[0].highest.amount").value("400000.00"));
+    }
+
+    @Test
+    void a_camel_case_dimension_reaches_the_use_case_as_its_enum() throws Exception {
+        mvc.perform(get("/api/v1/dashboard/distribution?groupBy=jobTitle")).andExpect(status().isOk());
+
+        // The API spells it jobTitle; the enum is JOB_TITLE. Upper-casing alone gives JOBTITLE,
+        // which does not exist - so the conversion has to insert the underscore.
+        org.assertj.core.api.Assertions.assertThat(LAST_DISTRIBUTION.get()).isEqualTo(DistributionDimension.JOB_TITLE);
+    }
+
+    @Test
+    void a_dimension_the_distribution_has_no_meaning_for_is_refused() throws Exception {
+        // `country` is a breakdown dimension, not a distribution one: a country is not a peer
+        // group. Sharing one enum between the endpoints would have made this a 200.
+        mvc.perform(get("/api/v1/dashboard/distribution?groupBy=country")).andExpect(status().isBadRequest());
+    }
+
     @TestConfiguration
     static class StubbedAnalytics {
 
@@ -113,6 +148,26 @@ class DashboardControllerTest {
                                         "Engineering", 3, money("220400.00", currency), money("73466.67", currency)),
                                 new PayrollBreakdown.BreakdownRow(
                                         "Finance", 2, money("140000.00", currency), money("70000.00", currency))),
+                        LocalDate.of(2026, 9, 1));
+            };
+        }
+
+        @Bean
+        GetSalaryDistribution distributions() {
+            return (dimension, filters) -> {
+                LAST_DISTRIBUTION.set(dimension);
+                CurrencyCode currency = filters.reportingCurrency();
+                return new SalaryDistribution(
+                        dimension,
+                        List.of(new SalaryDistribution.DistributionRow(
+                                "Software Engineer",
+                                4,
+                                money("100000.00", currency),
+                                money("100000.00", currency),
+                                money("200000.00", currency),
+                                money("300000.00", currency),
+                                money("400000.00", currency),
+                                money("400000.00", currency))),
                         LocalDate.of(2026, 9, 1));
             };
         }

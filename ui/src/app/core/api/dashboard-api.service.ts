@@ -5,8 +5,10 @@ import { Observable } from 'rxjs';
 import {
   BreakdownDimension,
   DashboardQuery,
+  DistributionDimension,
   PayrollBreakdown,
   PayrollSummary,
+  SalaryDistribution,
 } from '../../features/dashboard/dashboard.model';
 
 /**
@@ -26,6 +28,12 @@ export class DashboardApiService {
 
   breakdown(dimension: BreakdownDimension, query: DashboardQuery): Observable<PayrollBreakdown> {
     return this.http.get<PayrollBreakdown>('/api/v1/dashboard/breakdown', {
+      params: asParams(query).set('groupBy', dimension),
+    });
+  }
+
+  distribution(dimension: DistributionDimension, query: DashboardQuery): Observable<SalaryDistribution> {
+    return this.http.get<SalaryDistribution>('/api/v1/dashboard/distribution', {
       params: asParams(query).set('groupBy', dimension),
     });
   }
