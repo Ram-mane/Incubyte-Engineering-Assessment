@@ -36,6 +36,18 @@ services:
       # Flyway runs on startup, so a fresh database migrates itself on first boot.
       - key: SPRING_FLYWAY_ENABLED
         value: "true"
+      # TEMPORARY - remove immediately after this deploy has run once.
+      #
+      # Neon still holds a seed from before 2.10: 10,000 employees with their starting salaries and
+      # almost no revisions, so the deployed dashboard reports 978m against a local 1.21bn and the
+      # pay history is empty for nearly everybody. The seeder truncates and rebuilds on boot, which
+      # is the only way to reach that database from here - the credentials are Render-side and not
+      # in this repository.
+      #
+      # It must not stay: the free tier spins down, and a redeploy would then wipe any change made
+      # during a demo.
+      - key: SPRING_PROFILES_ACTIVE
+        value: "seed"
 
   - type: web
     name: salary-management-ui
