@@ -19,6 +19,8 @@ describe('AppComponent', () => {
       providers: [provideRouter([])],
     }).compileComponents();
     session = TestBed.inject(SessionService);
+    // No spec may assume it owns sessionStorage: it is shared by every spec in this browser.
+    session.end();
   });
 
   afterEach(() => session.end());

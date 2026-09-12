@@ -19,6 +19,6 @@
 }
 
 .app-toolbar__link--active {
-  // The active screen is named twice over: underlined here and in the page's own heading.
+  // Decoration only. What the current screen *is* comes from aria-current="page" on the link.
   text-decoration: underline;
 }

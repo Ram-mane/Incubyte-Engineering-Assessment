@@ -2,8 +2,10 @@
   <span>{{ title() }}</span>
   @if (session.isSignedIn()) {
     <nav class="app-toolbar__nav" aria-label="Main">
-      <a mat-button routerLink="/dashboard" routerLinkActive="app-toolbar__link--active">Dashboard</a>
-      <a mat-button routerLink="/employees" routerLinkActive="app-toolbar__link--active">Directory</a>
+      <a mat-button routerLink="/dashboard" routerLinkActive="app-toolbar__link--active"
+         ariaCurrentWhenActive="page">Dashboard</a>
+      <a mat-button routerLink="/employees" routerLinkActive="app-toolbar__link--active"
+         ariaCurrentWhenActive="page">Directory</a>
     </nav>
   }
   <span class="app-toolbar__spacer"></span>

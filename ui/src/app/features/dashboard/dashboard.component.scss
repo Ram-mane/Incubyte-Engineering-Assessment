@@ -36,6 +36,12 @@
     margin-bottom: 1.25rem;
   }
 
+  // Present from first paint and empty, rather than created with its content: a live region
+  // inserted in the same turn as the text inside it announces nothing.
+  &__results {
+    display: block;
+  }
+
   &__cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));

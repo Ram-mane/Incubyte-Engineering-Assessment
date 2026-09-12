@@ -15,6 +15,15 @@ const populated: PayrollSummary = {
   ratesAsOf: '2026-09-01',
 };
 
+const germany: PayrollSummary = {
+  headcount: 1_700,
+  totalSpend: { amount: '229327134.00', currency: 'USD' },
+  averageSalary: { amount: '134898.31', currency: 'USD' },
+  medianSalary: { amount: '128643.00', currency: 'USD' },
+  reportingCurrency: 'USD',
+  ratesAsOf: '2026-09-01',
+};
+
 const nobody: PayrollSummary = {
   headcount: 0,
   totalSpend: { amount: '0.00', currency: 'USD' },
@@ -24,9 +33,9 @@ const nobody: PayrollSummary = {
   ratesAsOf: '2026-09-01',
 };
 
-/** The figure a card shows, found the way a screen reader finds it: through the card's heading. */
+/** The figure on the card named by that heading — the card carries the name, not the figure. */
 const valueUnder = (element: HTMLElement, headingId: string): string =>
-  element.querySelector(`[aria-labelledby="${headingId}"]`)?.textContent?.trim() ?? '';
+  element.querySelector(`article[aria-labelledby="${headingId}"] p`)?.textContent?.trim() ?? '';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -129,8 +138,9 @@ describe('DashboardComponent', () => {
   it('says which day the exchange rates are from', async () => {
     await render();
 
-    // A total normalised through "whatever rate was current" is a number nobody can reproduce.
-    expect(element.textContent).toContain('2026');
+    // A total normalised through "whatever rate was current" is a number nobody can reproduce, so
+    // the day has to be on screen — not just the year.
+    expect(element.textContent).toContain('Sep 1, 2026');
   });
 
   it('offers the four filters the dashboard supports', async () => {
@@ -142,6 +152,7 @@ describe('DashboardComponent', () => {
 
   it('recomputes every card from one request when a country is chosen', async () => {
     await render();
+    showing(germany);
 
     await choose('Country', 'DE');
     submitFilters();
@@ -149,6 +160,10 @@ describe('DashboardComponent', () => {
     // One request, not one per card: the four figures on screen are four columns of one answer.
     expect(asked.length).toBe(2);
     expect(asked[1].country).toBe('DE');
+    expect(valueUnder(element, 'kpi-headcount')).toBe('1,700');
+    expect(valueUnder(element, 'kpi-total-spend')).toContain('229,327,134');
+    expect(valueUnder(element, 'kpi-average-salary')).toContain('134,898');
+    expect(valueUnder(element, 'kpi-median-salary')).toContain('128,643');
   });
 
   it('clears back to the whole company', async () => {
@@ -166,8 +181,12 @@ describe('DashboardComponent', () => {
     showing(nobody);
     await render();
 
+    // All four, exactly: a card left blank or showing the previous filter's figure is the defect
+    // this is guarding, and "contains a zero" would pass for $1,000,000.
     expect(valueUnder(element, 'kpi-headcount')).toBe('0');
-    expect(valueUnder(element, 'kpi-total-spend')).toMatch(/\$?0/);
+    expect(valueUnder(element, 'kpi-total-spend')).toBe('$0');
+    expect(valueUnder(element, 'kpi-average-salary')).toBe('$0');
+    expect(valueUnder(element, 'kpi-median-salary')).toBe('$0');
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(element.textContent).toContain('No employees match these filters');
   });

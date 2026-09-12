@@ -37,6 +37,10 @@ describe('LoginComponent', () => {
     expect(labels).toContain('Password');
   });
 
+  // Signing in here writes to sessionStorage, which the whole karma browser shares. A spec that
+  // leaves a session behind signs the next spec in unasked.
+  afterEach(() => TestBed.inject(SessionService).end());
+
   it('says an expired session expired, rather than showing nothing', async () => {
     await render({ expired: 'true' });
 

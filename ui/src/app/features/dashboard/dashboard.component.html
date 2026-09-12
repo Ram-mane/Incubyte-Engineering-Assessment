@@ -66,34 +66,36 @@
     </p>
   }
 
-  @if (dashboard.summary(); as summary) {
-    <div class="dashboard__cards" aria-live="polite">
-      <article class="dashboard__card">
-        <h2 id="kpi-total-spend">Total payroll spend</h2>
-        <p class="dashboard__figure" aria-labelledby="kpi-total-spend">{{ summary.totalSpend | money }}</p>
-      </article>
+  <div class="dashboard__results" aria-live="polite">
+    @if (dashboard.summary(); as summary) {
+      <div class="dashboard__cards">
+        <article class="dashboard__card" aria-labelledby="kpi-total-spend">
+          <h2 id="kpi-total-spend">Total payroll spend</h2>
+          <p class="dashboard__figure">{{ summary.totalSpend | money }}</p>
+        </article>
 
-      <article class="dashboard__card">
-        <h2 id="kpi-headcount">Active headcount</h2>
-        <p class="dashboard__figure" aria-labelledby="kpi-headcount">{{ summary.headcount | number }}</p>
-      </article>
+        <article class="dashboard__card" aria-labelledby="kpi-headcount">
+          <h2 id="kpi-headcount">Active headcount</h2>
+          <p class="dashboard__figure">{{ summary.headcount | number }}</p>
+        </article>
 
-      <article class="dashboard__card">
-        <h2 id="kpi-average-salary">Average salary</h2>
-        <p class="dashboard__figure" aria-labelledby="kpi-average-salary">{{ summary.averageSalary | money }}</p>
-      </article>
+        <article class="dashboard__card" aria-labelledby="kpi-average-salary">
+          <h2 id="kpi-average-salary">Average salary</h2>
+          <p class="dashboard__figure">{{ summary.averageSalary | money }}</p>
+        </article>
 
-      <article class="dashboard__card">
-        <h2 id="kpi-median-salary">Median salary</h2>
-        <p class="dashboard__figure" aria-labelledby="kpi-median-salary">{{ summary.medianSalary | money }}</p>
-      </article>
-    </div>
+        <article class="dashboard__card" aria-labelledby="kpi-median-salary">
+          <h2 id="kpi-median-salary">Median salary</h2>
+          <p class="dashboard__figure">{{ summary.medianSalary | money }}</p>
+        </article>
+      </div>
 
-    @if (dashboard.isEmpty()) {
-      <p class="dashboard__empty">
-        No employees match these filters. The cards above read zero because nobody was counted, not
-        because nothing loaded.
-      </p>
+      @if (dashboard.isEmpty()) {
+        <p class="dashboard__empty">
+          No employees match these filters. The cards above read zero because nobody was counted,
+          not because nothing loaded.
+        </p>
+      }
     }
-  }
+  </div>
 </section>

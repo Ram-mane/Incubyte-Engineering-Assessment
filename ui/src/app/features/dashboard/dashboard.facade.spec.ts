@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { DashboardApiService } from '../../core/api/dashboard-api.service';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
@@ -107,6 +107,37 @@ describe('DashboardFacade', () => {
     // showing, which is worse than a dashboard that says it failed.
     expect(facade.summary()).toBeNull();
     expect(facade.hasFailed()).toBeTrue();
+  });
+
+  it('ignores an answer to a filter that is no longer on screen', () => {
+    const de = new Subject<PayrollSummary>();
+    const everyone = new Subject<PayrollSummary>();
+    const queue = [de, everyone];
+    api.summary.and.callFake(() => queue.shift()!.asObservable());
+
+    facade.load({ country: 'DE' });
+    facade.load({});
+    everyone.next(summary(9842, '1213179157.20'));
+    de.next(summary(412, '50112900.00'));
+
+    // The slow DE answer lands last. Painting it would put 412 people under a filter bar reading
+    // "Any country", and the person reading it has no way to know which question it answers.
+    expect(facade.summary()?.headcount).toBe(9842);
+  });
+
+  it('does not let a stale failure erase figures that did load', () => {
+    const de = new Subject<PayrollSummary>();
+    const everyone = new Subject<PayrollSummary>();
+    const queue = [de, everyone];
+    api.summary.and.callFake(() => queue.shift()!.asObservable());
+
+    facade.load({ country: 'DE' });
+    facade.load({});
+    everyone.next(summary(9842, '1213179157.20'));
+    de.error(new Error('offline'));
+
+    expect(facade.summary()?.headcount).toBe(9842);
+    expect(facade.hasFailed()).toBeFalse();
   });
 
   it('offers the filter values the directory actually contains', () => {
