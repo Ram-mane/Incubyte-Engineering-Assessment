@@ -59,9 +59,10 @@ recording anything**, or the first two minutes of the video are a spinner.
 **4. Credentials shared in a chat transcript still need rotating.** The Render API key and the Neon
 database password. Neither is in the repository, but both are in a log.
 
-**5. `PLAN.md` 2.15 is still blocked.** It needs all five module packages to exist;
-`compensation` and `bulkimport` do not, and `compensation` may never — D111 records why the
-change-salary use case lives in `employee`. `analytics` now exists, so only two are missing.
+**5. `PLAN.md` 2.15 is deliberately unmet, not blocked** (**D139**). It needs all five module
+packages to exist; `compensation` and `bulkimport` do not, and `compensation` may never — D111
+records why the change-salary use case lives in `employee`. Empty packages will not be created to
+make the gate pass. Revisit when `bulkimport` lands at 3.10.
 
 **6. ~~The mutation gate has not run since Day 1.~~ Cleared.** Re-run over the changed domain:
 **178 of 201 killed, 89%**, test strength 96%, against a 70% threshold. The README quoted the
