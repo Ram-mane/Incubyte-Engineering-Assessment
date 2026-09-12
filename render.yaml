@@ -46,6 +46,15 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: dist/ui/browser
     autoDeployTrigger: commit
+    headers:
+      # The bundles are content-hashed, so they are safe to cache forever - but only if the
+      # document that names them is not. index.html is the one file whose URL never changes,
+      # so a returning visitor served it from cache asks for the previous build's chunk names
+      # and never learns a deploy happened. no-cache means revalidate, not "do not store":
+      # the browser still keeps it and still gets a 304 when nothing moved.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
     routes:
       # The browser calls /api on its own origin, so no API host is compiled into the
       # bundle and there is no CORS configuration to get wrong.
