@@ -22,7 +22,7 @@ export class EmployeeDetailFacade {
 
   readonly employee = this.person.asReadonly();
   readonly revisions = this.history.asReadonly();
-  /** The approved range. Null only while it is still loading or if the read failed. */
+  /** The approved range. Null while it is being read, or if the read failed. */
   readonly band = this.range.asReadonly();
   /** Distinct from "no band defined": one is an answer, the other is a missing answer. */
   readonly bandFailed = this.rangeFailed.asReadonly();
@@ -40,6 +40,12 @@ export class EmployeeDetailFacade {
         this.loading.set(false);
         // After the person, because a band is looked up by their role - and separately, so the
         // screen is usable whether or not this role has an approved range.
+        //
+        // The previous verdict is dropped before the new one is asked for. A refetch follows a
+        // pay change, so the header is already showing the new figure while this request is in
+        // flight: keeping the old verdict puts "Within band" beside a salary it was never
+        // computed against. Null with no failure is the template's loading state.
+        this.range.set(null);
         this.rangeFailed.set(false);
         this.api.band(employee).subscribe({
           next: (band) => this.range.set(band),
