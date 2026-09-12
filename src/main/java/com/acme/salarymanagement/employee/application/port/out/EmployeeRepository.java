@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import com.acme.salarymanagement.employee.domain.Employee;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
+import com.acme.salarymanagement.shared.Money;
 
 /** Loading and storing the aggregate itself, as opposed to reading the directory. */
 public interface EmployeeRepository {
@@ -17,5 +18,11 @@ public interface EmployeeRepository {
      * the aggregate today, and a method that claims to save an employee while writing two columns
      * is a method someone will later trust with a third.
      */
-    void saveCurrentSalaryOf(Employee employee);
+    /**
+     * @param replacing the salary the aggregate was carrying when the change was decided - the
+     *     revision's {@code previousAmount}. The write applies only while the stored salary is
+     *     still that, so two managers deciding from the same figure cannot both succeed.
+     * @throws com.acme.salarymanagement.employee.domain.ConcurrentSalaryChange if it moved
+     */
+    void saveCurrentSalaryOf(Employee employee, Money replacing);
 }

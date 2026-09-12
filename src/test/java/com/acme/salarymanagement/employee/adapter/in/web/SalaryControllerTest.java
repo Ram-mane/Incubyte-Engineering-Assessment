@@ -30,6 +30,7 @@ import com.acme.salarymanagement.employee.application.port.in.SalaryRevisionView
 import com.acme.salarymanagement.employee.application.port.out.EmployeeSummary;
 import com.acme.salarymanagement.employee.application.service.EmployeeNotFound;
 import com.acme.salarymanagement.employee.domain.ChangeReason;
+import com.acme.salarymanagement.employee.domain.ConcurrentSalaryChange;
 import com.acme.salarymanagement.employee.domain.UserId;
 import com.acme.salarymanagement.shared.CountryCode;
 import com.acme.salarymanagement.shared.CurrencyCode;
@@ -49,6 +50,8 @@ class SalaryControllerTest {
     private static final CurrencyCode INR = new CurrencyCode("INR");
 
     static final AtomicReference<ChangeSalaryCommand> LAST_COMMAND = new AtomicReference<>();
+    /** The employee whose pay somebody else moved first. */
+    private static final UUID RACED = UUID.fromString("00000000-0000-0000-0000-0000000000ff");
 
     @Autowired
     private MockMvc mvc;
@@ -154,6 +157,24 @@ class SalaryControllerTest {
                 .andExpect(jsonPath("$[1].newAmount.amount").value("1200000.00"));
     }
 
+    @Test
+    void a_pay_change_somebody_else_beat_is_a_conflict_not_a_failure() throws Exception {
+        mvc.perform(put("/api/v1/employees/" + RACED + "/salary")
+                        .with(jwt().jwt(token -> token.claim("sub", ACTOR.toString()))
+                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                        "ROLE_HR_MANAGER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":\"1500000.00\",\"currency\":\"INR\",\"reason\":\"MERIT\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("This pay change was not applied"))
+                // Tells the caller what to do instead of repeating the request unchanged, and
+                // names no amount (D080).
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Reload")))
+                .andExpect(jsonPath("$.detail")
+                        .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.matchesRegex(".*\\d+\\.\\d{2}.*"))));
+    }
+
     @TestConfiguration
     static class AUseCaseThatRemembers {
 
@@ -162,6 +183,9 @@ class SalaryControllerTest {
             return command -> {
                 if (command.employeeId().value().equals(ABSENTEE)) {
                     throw new EmployeeNotFound(command.employeeId());
+                }
+                if (command.employeeId().value().equals(RACED)) {
+                    throw new ConcurrentSalaryChange(command.employeeId());
                 }
                 LAST_COMMAND.set(command);
                 return new EmployeeSummary(

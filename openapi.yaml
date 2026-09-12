@@ -203,6 +203,12 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        "409":
+          description: |
+            Somebody else changed this employee's pay between the figure this request was decided
+            against and this write. The change was not applied and no revision was recorded.
+            Reload the employee and decide again: repeating the request unchanged would record a
+            step the pay never took. See ADR-0014's consequences and D147.
         "422":
           description: The employee is TERMINATED, so their pay cannot change
           content:

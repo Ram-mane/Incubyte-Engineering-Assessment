@@ -61,7 +61,9 @@ class ChangeSalaryService implements ChangeSalary {
         SalaryRevision revision = employee.changeSalaryTo(
                 command.newSalary(), command.reason(), command.actor(), command.note(), clock.instant());
 
-        employees.saveCurrentSalaryOf(employee);
+        // The salary the revision says it moved from is the salary the write requires to still
+        // be there. If it is not, neither write happens.
+        employees.saveCurrentSalaryOf(employee, revision.previousAmount());
         revisions.append(revision);
 
         return EmployeeSummary.of(employee);

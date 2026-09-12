@@ -44,12 +44,10 @@ _(none — working tree clean)_
 filters, one round trip per filter change, 23 new Angular specs. The breakdown and distribution
 (3.3, 3.4) are still to come.
 
-**2. Two concurrent pay changes both succeed.** There is no optimistic locking on the employee
-`UPDATE`, so two managers changing the same salary at once each write a revision, both carrying the
-same `previous_amount`, and the employee ends on whichever committed last. The audit log then
-describes a history that never happened. Fix is `WHERE current_salary = ?` on the `UPDATE` and a
-rejection when zero rows change — no ORM, no version column, about twenty minutes. Recorded in
-ADR-0014's consequences. **Do it after the dashboard renders, not before.**
+**2. ~~Two concurrent pay changes both succeed.~~ Cleared.** Compare-and-set on the salary itself
+(D147): the `UPDATE` requires the salary the revision says it moved from, and zero rows is a 409.
+Proved by reverting the clause — both threads succeed and the log carries two revisions from the
+same starting figure. Three integration tests, one of them genuinely threaded.
 
 **3. Render free tier cold start exceeds two minutes.** The first request after idle returned
 nothing for 120 s; the next returned in 1.3 s. Warm the API with

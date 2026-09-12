@@ -4,6 +4,9 @@ import { forkJoin } from 'rxjs';
 import { EmployeeApiService } from '../../core/api/employee-api.service';
 import { ChangeSalaryRequest, Employee, SalaryRevision } from '../employees/employee.model';
 
+/** The salary moved between the decision and the write: 409, and the screen is out of date. */
+const CONFLICT = 409;
+
 /** One employee and their pay history, which are always read and shown together. */
 @Injectable()
 export class EmployeeDetailFacade {
@@ -46,8 +49,14 @@ export class EmployeeDetailFacade {
         this.load(id);
         onDone();
       },
-      error: (failure: { error?: { detail?: string } }) => {
+      error: (failure: { status?: number; error?: { detail?: string } }) => {
         this.changeFailed.set(failure.error?.detail ?? 'The change was refused.');
+        if (failure.status === CONFLICT) {
+          // Somebody else moved this pay. The figure on screen is the one this manager decided
+          // against, so re-read before they decide again - the message says to, and leaving the
+          // stale number under it would be asking them to repeat the same mistake.
+          this.load(id);
+        }
       },
     });
   }

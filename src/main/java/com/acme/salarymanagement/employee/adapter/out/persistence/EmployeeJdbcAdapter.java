@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import com.acme.salarymanagement.employee.application.port.out.EmployeeRepository;
+import com.acme.salarymanagement.employee.domain.ConcurrentSalaryChange;
 import com.acme.salarymanagement.employee.domain.EmailAddress;
 import com.acme.salarymanagement.employee.domain.Employee;
 import com.acme.salarymanagement.employee.domain.EmployeeId;
@@ -64,17 +65,30 @@ class EmployeeJdbcAdapter implements EmployeeRepository {
                 .findFirst();
     }
 
+    /**
+     * Compare-and-set on the salary itself, which is why there is no version column: the value
+     * being guarded is the value being written, so a separate counter would add a column and a
+     * migration to say what {@code salary_amount} already says. Currency is in the predicate too -
+     * a move from 100,000 USD to 100,000 EUR changes pay without changing the number.
+     */
     @Override
-    public void saveCurrentSalaryOf(Employee employee) {
+    public void saveCurrentSalaryOf(Employee employee, Money replacing) {
         int updated = jdbc.update(
-                "UPDATE employee SET salary_amount = ?, salary_currency = ? WHERE id = ?",
+                """
+                UPDATE employee
+                SET    salary_amount = ?, salary_currency = ?
+                WHERE  id = ? AND salary_amount = ? AND salary_currency = ?
+                """,
                 employee.currentSalary().amount(),
                 employee.currentSalary().currency().code(),
-                employee.id().value());
+                employee.id().value(),
+                replacing.amount(),
+                replacing.currency().code());
         if (updated != ONE_ROW) {
-            // Silence here would mean pay that did not move while a revision said it had.
-            throw new IllegalStateException(
-                    "employee %s was not updated".formatted(employee.id().value()));
+            // Either somebody else moved this salary first, or the employee is gone. Both mean the
+            // revision about to be written describes a step that did not happen, and the whole
+            // transaction has to go with it.
+            throw new ConcurrentSalaryChange(employee.id());
         }
     }
 }

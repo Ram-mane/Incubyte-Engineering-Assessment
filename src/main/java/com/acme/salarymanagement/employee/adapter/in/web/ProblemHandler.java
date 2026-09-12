@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.acme.salarymanagement.employee.application.service.EmployeeNotFound;
+import com.acme.salarymanagement.employee.domain.ConcurrentSalaryChange;
 
 /**
  * Turns what the caller got wrong into what the caller gets back.
@@ -23,6 +24,13 @@ class ProblemHandler {
     @ExceptionHandler({EmployeeNotFound.class})
     ProblemDetail thereIsNoSuchEmployee(EmployeeNotFound missing) {
         return problem(HttpStatus.NOT_FOUND, "No such employee", missing.getMessage());
+    }
+
+    @ExceptionHandler({ConcurrentSalaryChange.class})
+    ProblemDetail somebodyElseChangedItFirst(ConcurrentSalaryChange lost) {
+        // 409, not 422: nothing about the request was wrong, and repeating it unchanged is exactly
+        // what the caller must not do. 04-API-DESIGN reserves 409 for this.
+        return problem(HttpStatus.CONFLICT, "This pay change was not applied", lost.getMessage());
     }
 
     @ExceptionHandler({IllegalStateException.class})
