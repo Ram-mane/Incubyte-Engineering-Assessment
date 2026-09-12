@@ -70,7 +70,7 @@ cd ui && npm install && npm start                              # http://localhos
 ```bash
 ./mvnw verify            # unit + integration + ArchUnit + Spotless + Checkstyle + PMD + JaCoCo
 ./mvnw -Pmutation test   # mutation testing, 70% threshold, currently 89%
-cd ui && npm test        # 101 Angular specs
+cd ui && npm test        # 106 Angular specs
 cd ui && npm run build   # the production compiler: stricter templates than the test run (D161)
 ```
 
@@ -227,12 +227,16 @@ The ones that mattered for correctness or for the confirmed scope are fixed and 
 commit log; what follows is what it found and I chose **not** to fix before submitting, with its
 framing rather than mine.
 
-**Not built, and in scope**
+**Not built**
 
-- **CSV bulk import with a rejected-rows report.** In the requirements as in-scope and confirmed
-  with the customer; not built. The API and the screen are both missing. It is the largest gap in
-  the submission and I would do it first: streamed and chunked, partial success by default, because
-  an HR manager migrating off Excel needs to fix twelve bad rows rather than re-upload ten thousand.
+- **CSV bulk import with a rejected-rows report.** Not built, and **not a customer requirement** —
+  the customer never raised it. It entered this build's scope through
+  [`01-REQUIREMENTS.md`](docs/01-REQUIREMENTS.md) §3.1, where I inferred it from their data being in
+  Excel today. An inference of mine is not a request of theirs, and an earlier draft of this section
+  described it as confirmed with the customer, which it never was. It stays listed because it is a
+  real thing a migrating HR team would need, and because a scope item I invented is worth showing:
+  streamed and chunked, partial success by default, so twelve bad rows are fixed rather than ten
+  thousand re-uploaded.
 - **End-to-end journeys (Playwright) and a committed load test (k6).** Both planned for Day 3 and
   both cut. What replaced them is narrower and real: the deployed site was walked through a
   headless browser to verify each finished feature, and `docs/evidence/` holds `EXPLAIN` plans
@@ -250,9 +254,14 @@ framing rather than mine.
   fold accents: "Muller" does not find "Müller". `unaccent` plus a functional index would fix it,
   and would need its own `EXPLAIN` evidence because it changes which index the planner picks.
 - **C7 — money format in the change-pay dialog.** The current salary is shown as the raw decimal
-  string (`1380000.00`) next to figures that are formatted elsewhere (`₹13,80,000`). Deliberate
-  while the input was free text — the hint had to match what you would type — and now that the
-  field is a number input it could be formatted.
+  string (`1380000.00`) next to figures that are formatted elsewhere (`₹13,80,000`). It is
+  deliberate, and it stays that way: the field beside it is a **text** input, not a number input.
+  `type="number"` was tried and reverted (D156) because Angular binds it through `parseFloat` —
+  money through a double, which this codebase forbids on the wire — and because typing the `.` in
+  `1500000.` made the browser report an empty value and cleared the field mid-entry. The hint has
+  to match what you would actually type into a text field, so formatting it would make the example
+  wrong rather than nicer. An earlier version of this entry said the field was now a number input
+  and the figure could therefore be formatted; both halves of that were stale.
 - **C8 — sliding session expiry.** The JWT is short-lived with no refresh, so a long editing
   session can expire mid-form. The expiry is handled visibly rather than silently (you are sent to
   sign in with a reason), but the work in progress is lost.
@@ -260,6 +269,45 @@ framing rather than mine.
   container below roughly 700px. **Method caveat, which the reviewer stated:** this was observed by
   resizing a desktop browser, not confirmed on a real device, so the severity is a judgement rather
   than a measurement.
+
+**Second pass (R1–R12)**
+
+A later walk-through of the finished build found these. The two that could mislead someone about
+pay — a band verdict left on screen from the previous salary, and wire constants shown as
+`MARKET_ADJUSTMENT` — are fixed and in the commit log. The rest are recorded, not fixed:
+
+- **R1 — "role" and "job title" name the same thing.** The directory filter says Job title, the
+  band copy says role, and the API field is `jobTitle`. One word should win, and it should be the
+  one on the wire.
+- **R2 — SGD renders as an ISO code where other currencies render as symbols.** `Intl` has no
+  glyph for it and falls back to the code, so a Singapore row reads `SGD 195,000` beside
+  `₹15,00,000`. Consistent by rule, inconsistent to look at.
+- **R3 — the distribution headers mix registers.** Column labels shift between sentence case and
+  the statistical shorthand (`p25`, `Median`, `p75`).
+- **R4 — the mini bars in the distribution table are unexplained.** They encode where the median
+  sits in the row's range; nothing on screen says so and there is no legend.
+- **R5 — seeded pay changes are all timestamped 5:30 AM.** They are written at midnight UTC
+  (`atStartOfDay().toInstant(ZoneOffset.UTC)`) and rendered in the viewer's zone, which in IST is
+  05:30. Correct, and it reads as a machine rather than a person having made the change.
+- **R6 — signing in does not return you to the page you asked for.** A deep link while signed out
+  sends you to sign-in and then to the dashboard, losing the URL you wanted.
+- **R7 — the band disclaimer is worded two ways.** The employee page says pay changes "are not
+  restricted to it"; the dialog says "For context. Pay changes are not restricted to the band."
+  Same rule, two sentences, and a reader has to check they mean the same thing.
+- **R8 — the directory has no "Showing 0 of 0" counter on an empty result.** The count that
+  frames every other result disappears in the one case where the number is the answer.
+- **R9 — the "no band" copy says "role and level" when the band is keyed on role, level and
+  country.** The three-part key is what the query uses and what the populated panel says; the empty
+  case names two thirds of it, which would send someone looking for a band that was never missing.
+- **R10 — a 21-digit amount is refused with a message about the wrong thing.** `salary_amount` is
+  `numeric(19, 4)`, so anything over fifteen integer digits is rejected by PostgreSQL rather than by
+  a rule the screen can explain.
+- **R11 — no upper bound on a salary.** The domain requires a positive amount and nothing more, so
+  the effective ceiling is R10's column width. A plausibility bound belongs in the domain, where it
+  can say what it is.
+- **R12 — a server-side refusal does not mark the field invalid.** The message appears and is
+  announced (`role="alert"`), but the input keeps its valid styling, so the error and the field it
+  is about do not look connected.
 
 **Polish (P1–P7)**
 

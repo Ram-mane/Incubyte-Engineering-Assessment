@@ -109,7 +109,7 @@ raising quality rather than adding features.
 | 3.7b | **SQL aggregate vs a full-precision `BigDecimal` reference over the same seeded rows, asserting exact equality** — the reference mirrors the SQL: accumulate across all currencies unrounded, round once at the end. It must not be built from `Money`, which rounds on construction (D032) — `Money` represents amounts, it is not an accumulator. Zero tolerance, because "to the minor unit" is still a tolerance and the real gap would be `0.005 × currencies` ([ADR-0013](docs/adr/0013-sum-then-convert-for-currency-totals.md), D061) | `test: pin the sql total to a java reference computation` |
 | 3.8 | Caffeine caching, evicted on `SalaryChanged` | `perf: cache dashboard aggregates and fx rates` |
 | 3.9 | Angular dashboard: KPI cards, charts, filter bar | `feat: add dashboard with kpi cards and filters` |
-| 3.10 | CSV bulk import + rejected-rows report (API + screen) | `feat: add csv bulk import with row-level validation` |
+| ~~3.10~~ | ~~CSV bulk import + rejected-rows report~~ — **struck 13 Sep 2026.** Not a requirement: it appears nowhere in the customer's brief. It entered this plan from `01-REQUIREMENTS.md` §3.1, which inferred it from the customer's data being in Excel. An inference is not a request, and it was about to be reported as the largest gap in the submission | — |
 
 **Afternoon — evidence and finish**
 
@@ -150,7 +150,7 @@ Record with OBS, one take per section. Show the terminal and the code, not only 
 ## If time runs short — cut in this order
 
 1. 100k-scale comparison run (3.12)
-2. Bulk import UI (3.10) — keep the API
+2. ~~Bulk import UI (3.10) — keep the API~~ — struck; not a requirement
 3. Distribution chart (3.4) — keep the KPI cards and breakdown
 4. Playwright down to two specs (3.14)
 

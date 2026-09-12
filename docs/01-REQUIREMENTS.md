@@ -35,8 +35,11 @@ Payroll — tax, payslips, deductions, disbursement — is a different product a
   like on 3 March 2024"*. See §4.
 - **Salary bands** per (job title × level × country) used to *display* where a salary sits within its
   range. Enforcement rules and alerting are future scope.
-- **Bulk CSV import** with row-level validation and a rejected-rows report — the customer's data is
-  currently in Excel, so ingesting it is part of solving their problem.
+- **Bulk CSV import** with row-level validation and a rejected-rows report. **Inferred, not
+  requested:** the customer's data is currently in Excel, so I judged that ingesting it is part of
+  solving their problem. Unlike every other line in this section it was never put to them and is
+  not in their brief — it is the one scope item here that is mine. Not built; see the README's
+  known issues.
 
 ### 3.2 Answer questions — the dashboard
 Confirmed with Incubyte as the target of this build.
