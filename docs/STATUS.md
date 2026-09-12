@@ -58,10 +58,15 @@ nothing for 120 s; the next returned in 1.3 s. Warm the API with
 `curl https://salary-management-api-bv03.onrender.com/actuator/health` **before demoing or
 recording anything**, or the first two minutes of the video are a spinner.
 
-**4. Credentials shared in a chat transcript still need rotating — now urgent.** The Render API key,
-and the Neon database password, which has since been pasted into a second transcript in full. It is
-a live owner-level credential to the demo database. Rotate it in Neon and update
-`SPRING_DATASOURCE_PASSWORD` on the Render service; nothing in the repository holds it.
+**4. ~~Credentials shared in a chat transcript.~~ Rotated, 12 Sep.** The Render API key and the Neon
+password were both rotated after the password was pasted into a transcript in full. Nothing in the
+repository ever held either.
+
+**What rotation leaves behind:** the deployed API must be carrying the *new* `SPRING_DATASOURCE_PASSWORD`.
+It was still serving queries afterwards, but that does not prove it — Hikari's pool is 10
+connections and those may predate the rotation. The one conclusive check is a restart from the
+Render dashboard (Manual Deploy → Restart service, ~4 min), and it is worth doing **before**
+recording rather than discovering it when the free tier spins down mid-demo.
 
 **5. `PLAN.md` 2.15 is deliberately unmet, not blocked** (**D139**). It needs all five module
 packages to exist; `compensation` and `bulkimport` do not, and `compensation` may never — D111
