@@ -61,9 +61,7 @@
   }
 
   @if (dashboard.hasFailed()) {
-    <p role="alert" class="dashboard__error">
-      The dashboard could not be loaded. The server may be starting up.
-    </p>
+    <p role="alert" class="dashboard__error">{{ dashboard.failure() }}</p>
   }
 
   <div class="dashboard__results" aria-live="polite">

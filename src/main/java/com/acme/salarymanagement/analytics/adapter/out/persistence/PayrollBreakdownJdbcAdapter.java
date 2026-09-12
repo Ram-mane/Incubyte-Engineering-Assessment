@@ -4,7 +4,10 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -32,36 +35,18 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class PayrollBreakdownJdbcAdapter implements PayrollBreakdownRepository {
 
-    private static final String BREAKDOWN =
-            """
-            WITH rates AS (
-                SELECT from_currency, rate
-                FROM   exchange_rate
-                WHERE  to_currency = :reportingCurrency
-                  AND  as_of = (SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency)
-            ),
-            normalised AS (
-                SELECT e.%s                                    AS grp,
-                       e.salary_amount * COALESCE(fx.rate, 1)  AS reporting_amount
-                FROM   employee e
-                LEFT JOIN rates fx ON fx.from_currency = e.salary_currency
-                WHERE  e.status = 'ACTIVE'
-                  AND  (CAST(:country    AS text) IS NULL OR e.country_code    = :country)
-                  AND  (CAST(:department AS text) IS NULL OR e.department      = :department)
-                  AND  (CAST(:jobTitle   AS text) IS NULL OR e.job_title       = :jobTitle)
-                  AND  (CAST(:level      AS text) IS NULL OR e.seniority_level = :level)
-            )
+    private static final String BREAKDOWN = NormalisedSalaries.CTE
+            + """
             SELECT grp,
                    count(*)                AS headcount,
                    sum(reporting_amount)   AS total_spend,
-                   avg(reporting_amount)   AS average_salary
+                   avg(reporting_amount)   AS average_salary,
+                   %s
             FROM   normalised
             GROUP BY grp
             ORDER BY total_spend DESC, grp
-            """;
-
-    private static final String RATES_AS_OF =
-            "SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency";
+            """
+                    .formatted(NormalisedSalaries.SNAPSHOT_AND_COVERAGE);
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -71,13 +56,20 @@ class PayrollBreakdownJdbcAdapter implements PayrollBreakdownRepository {
 
     @Override
     public PayrollBreakdown breakDown(BreakdownDimension dimension, DashboardFilters filters) {
-        MapSqlParameterSource parameters = parameters(filters);
-        String sql = BREAKDOWN.formatted(columnFor(dimension));
+        MapSqlParameterSource parameters = NormalisedSalaries.parameters(filters);
+        String sql = BREAKDOWN.formatted("e." + columnFor(dimension) + " AS grp,");
 
-        List<PayrollBreakdown.BreakdownRow> rows =
-                jdbc.query(sql, parameters, (ResultSet row, int number) -> asRow(row, filters));
+        Set<String> unconvertible = new LinkedHashSet<>();
+        AtomicReference<LocalDate> asOf = new AtomicReference<>();
+        List<PayrollBreakdown.BreakdownRow> rows = jdbc.query(sql, parameters, (ResultSet row, int number) -> {
+            unconvertible.addAll(NormalisedSalaries.unconvertibleIn(row));
+            asOf.compareAndSet(null, row.getObject("rates_as_of", LocalDate.class));
+            return asRow(row, filters);
+        });
+        NormalisedSalaries.refuseIfIncomplete(unconvertible, filters, asOf.get());
 
-        return new PayrollBreakdown(dimension, rows, ratesAsOf(parameters));
+        // No group means no employee to convert, so the date still has to come from its own read.
+        return new PayrollBreakdown(dimension, rows, rows.isEmpty() ? ratesAsOf(parameters) : asOf.get());
     }
 
     /**
@@ -92,31 +84,14 @@ class PayrollBreakdownJdbcAdapter implements PayrollBreakdownRepository {
         };
     }
 
-    private MapSqlParameterSource parameters(DashboardFilters filters) {
-        return new MapSqlParameterSource()
-                .addValue("reportingCurrency", filters.reportingCurrency().code())
-                .addValue(
-                        "country",
-                        filters.country() == null ? null : filters.country().code())
-                .addValue(
-                        "department",
-                        filters.department() == null
-                                ? null
-                                : filters.department().value())
-                .addValue(
-                        "jobTitle",
-                        filters.jobTitle() == null ? null : filters.jobTitle().value())
-                .addValue(
-                        "level",
-                        filters.level() == null ? null : filters.level().name());
-    }
-
     /**
-     * Read separately rather than joined onto every group, because it is one date for the whole
-     * answer. It is the second statement of two, which is what the round-trip test allows.
+     * Only for the empty case. A grouped query that returns no groups cannot carry the snapshot
+     * date, and a filter matching nobody still has to say which day it would have converted
+     * through (D143). When there are groups the date rides along on every row, so the populated
+     * path - which is every path a dashboard actually renders - is one statement.
      */
     private LocalDate ratesAsOf(MapSqlParameterSource parameters) {
-        return jdbc.queryForObject(RATES_AS_OF, parameters, LocalDate.class);
+        return jdbc.queryForObject(NormalisedSalaries.SNAPSHOT_DATE_ONLY, parameters, LocalDate.class);
     }
 
     private static PayrollBreakdown.BreakdownRow asRow(ResultSet row, DashboardFilters filters) throws SQLException {

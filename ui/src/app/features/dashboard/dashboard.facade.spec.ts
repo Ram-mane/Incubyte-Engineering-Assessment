@@ -195,6 +195,32 @@ describe('DashboardFacade', () => {
     expect(api.breakdown.calls.mostRecent().args[0]).toBe('level');
   });
 
+  it('shows what the server said when it refuses the question, not a generic failure', () => {
+    api.summary.and.returnValue(
+      throwError(() => ({
+        status: 422,
+        error: {
+          detail: 'No exchange rates to EUR at all. Seed rates to that currency, or report in one the table covers.',
+        },
+      })),
+    );
+
+    facade.load({ currency: 'EUR' });
+
+    // "The dashboard could not be loaded. The server may be starting up." would send an HR manager
+    // to refresh a page that will never load, instead of telling them the rate table is the issue.
+    expect(facade.failure()).toContain('No exchange rates to EUR');
+    expect(facade.hasFailed()).toBeTrue();
+  });
+
+  it('falls back to a plain message when the failure carries no explanation', () => {
+    api.summary.and.returnValue(throwError(() => new Error('offline')));
+
+    facade.load({});
+
+    expect(facade.failure()).toContain('could not be loaded');
+  });
+
   it('offers the filter values the directory actually contains', () => {
     answering(summary(9842, '1213179157.20'));
 

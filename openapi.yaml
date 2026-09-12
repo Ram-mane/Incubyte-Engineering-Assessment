@@ -259,7 +259,10 @@ paths:
         - name: currency
           in: query
           required: false
-          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          description: |
+            What to report in. USD by default. The FX table must hold a rate from every currency in
+            the result to this one, on one date - otherwise the request is refused with 422 rather
+            than answered with an unconverted figure.
           schema: { type: string, minLength: 3, maxLength: 3, default: USD }
       responses:
         "200":
@@ -268,6 +271,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PayrollSummary'
+        "422":
+          description: |
+            Some salary in the result cannot be converted to the reporting currency: the rate table
+            has no rate from that currency on the snapshot date. Names the currencies and the date,
+            never an amount. See ADR-0015 - the alternative was converting at 1.0, which reported
+            1,000,000 INR as 1,000,000 EUR.
 
   /dashboard/breakdown:
     get:
@@ -299,7 +308,10 @@ paths:
         - name: currency
           in: query
           required: false
-          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          description: |
+            What to report in. USD by default. The FX table must hold a rate from every currency in
+            the result to this one, on one date - otherwise the request is refused with 422 rather
+            than answered with an unconverted figure.
           schema: { type: string, minLength: 3, maxLength: 3, default: USD }
       responses:
         "200":
@@ -309,7 +321,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/PayrollBreakdown'
         "400":
-          description: groupBy missing, or naming a dimension that does not exist
+          description: |
+            groupBy missing or naming a dimension that does not exist, or an unparseable country,
+            level or currency - the value objects reject those and the handler returns 400.
+        "422":
+          description: Some salary in the result cannot be converted to the reporting currency.
 
   /dashboard/distribution:
     get:
@@ -341,7 +357,10 @@ paths:
         - name: currency
           in: query
           required: false
-          description: What to report in. USD by default; must be a currency the FX table has rates to.
+          description: |
+            What to report in. USD by default. The FX table must hold a rate from every currency in
+            the result to this one, on one date - otherwise the request is refused with 422 rather
+            than answered with an unconverted figure.
           schema: { type: string, minLength: 3, maxLength: 3, default: USD }
       responses:
         "200":
@@ -351,7 +370,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/SalaryDistribution'
         "400":
-          description: groupBy missing, or naming a dimension this endpoint has no meaning for
+          description: |
+            groupBy missing or naming a dimension this endpoint has no meaning for, or an
+            unparseable country, level or currency.
+        "422":
+          description: Some salary in the result cannot be converted to the reporting currency.
 
   /employees/filter-options:
     get:

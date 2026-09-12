@@ -4,7 +4,10 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -35,40 +38,22 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class SalaryDistributionJdbcAdapter implements SalaryDistributionRepository {
 
-    private static final String DISTRIBUTION =
-            """
-            WITH rates AS (
-                SELECT from_currency, rate
-                FROM   exchange_rate
-                WHERE  to_currency = :reportingCurrency
-                  AND  as_of = (SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency)
-            ),
-            normalised AS (
-                SELECT e.%s                                    AS grp,
-                       e.salary_amount * COALESCE(fx.rate, 1)  AS reporting_amount
-                FROM   employee e
-                LEFT JOIN rates fx ON fx.from_currency = e.salary_currency
-                WHERE  e.status = 'ACTIVE'
-                  AND  (CAST(:country    AS text) IS NULL OR e.country_code    = :country)
-                  AND  (CAST(:department AS text) IS NULL OR e.department      = :department)
-                  AND  (CAST(:jobTitle   AS text) IS NULL OR e.job_title       = :jobTitle)
-                  AND  (CAST(:level      AS text) IS NULL OR e.seniority_level = :level)
-            )
+    private static final String DISTRIBUTION = NormalisedSalaries.CTE
+            + """
             SELECT grp,
-                   count(*)             AS headcount,
+                   count(*)              AS headcount,
                    min(reporting_amount) AS lowest,
                    percentile_disc(0.25) WITHIN GROUP (ORDER BY reporting_amount) AS p25,
                    percentile_disc(0.50) WITHIN GROUP (ORDER BY reporting_amount) AS median,
                    percentile_disc(0.75) WITHIN GROUP (ORDER BY reporting_amount) AS p75,
                    percentile_disc(0.90) WITHIN GROUP (ORDER BY reporting_amount) AS p90,
-                   max(reporting_amount) AS highest
+                   max(reporting_amount) AS highest,
+                   %s
             FROM   normalised
             GROUP BY grp
             ORDER BY max(reporting_amount) - min(reporting_amount) DESC, grp
-            """;
-
-    private static final String RATES_AS_OF =
-            "SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency";
+            """
+                    .formatted(NormalisedSalaries.SNAPSHOT_AND_COVERAGE);
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -78,13 +63,22 @@ class SalaryDistributionJdbcAdapter implements SalaryDistributionRepository {
 
     @Override
     public SalaryDistribution distribute(DistributionDimension dimension, DashboardFilters filters) {
-        MapSqlParameterSource parameters = parameters(filters);
-        String sql = DISTRIBUTION.formatted(columnFor(dimension));
+        MapSqlParameterSource parameters = NormalisedSalaries.parameters(filters);
+        String sql = DISTRIBUTION.formatted("e." + columnFor(dimension) + " AS grp,");
 
-        List<SalaryDistribution.DistributionRow> rows =
-                jdbc.query(sql, parameters, (ResultSet row, int number) -> asRow(row, filters));
+        Set<String> unconvertible = new LinkedHashSet<>();
+        AtomicReference<LocalDate> asOf = new AtomicReference<>();
+        List<SalaryDistribution.DistributionRow> rows = jdbc.query(sql, parameters, (ResultSet row, int number) -> {
+            unconvertible.addAll(NormalisedSalaries.unconvertibleIn(row));
+            asOf.compareAndSet(null, row.getObject("rates_as_of", LocalDate.class));
+            return asRow(row, filters);
+        });
+        NormalisedSalaries.refuseIfIncomplete(unconvertible, filters, asOf.get());
 
-        return new SalaryDistribution(dimension, rows, jdbc.queryForObject(RATES_AS_OF, parameters, LocalDate.class));
+        LocalDate ratesAsOf = rows.isEmpty()
+                ? jdbc.queryForObject(NormalisedSalaries.SNAPSHOT_DATE_ONLY, parameters, LocalDate.class)
+                : asOf.get();
+        return new SalaryDistribution(dimension, rows, ratesAsOf);
     }
 
     /** Exhaustive over the enum, so adding a dimension without deciding its column will not compile. */
@@ -93,25 +87,6 @@ class SalaryDistributionJdbcAdapter implements SalaryDistributionRepository {
             case JOB_TITLE -> "job_title";
             case DEPARTMENT -> "department";
         };
-    }
-
-    private MapSqlParameterSource parameters(DashboardFilters filters) {
-        return new MapSqlParameterSource()
-                .addValue("reportingCurrency", filters.reportingCurrency().code())
-                .addValue(
-                        "country",
-                        filters.country() == null ? null : filters.country().code())
-                .addValue(
-                        "department",
-                        filters.department() == null
-                                ? null
-                                : filters.department().value())
-                .addValue(
-                        "jobTitle",
-                        filters.jobTitle() == null ? null : filters.jobTitle().value())
-                .addValue(
-                        "level",
-                        filters.level() == null ? null : filters.level().name());
     }
 
     private static SalaryDistribution.DistributionRow asRow(ResultSet row, DashboardFilters filters)

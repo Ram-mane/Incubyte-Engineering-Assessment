@@ -67,9 +67,8 @@ class SalaryDistributionIT extends PostgresIntegrationTest {
         long statements =
                 CountingDataSource.statementsIssuedBy(() -> distributions.by(DistributionDimension.JOB_TITLE, ours()));
 
-        // Four percentiles x two groups is one query, not eight. Same shape as the breakdown: the
-        // grouped query plus the constant rate date (D143).
-        assertThat(statements).isEqualTo(2);
+        // Four percentiles across every group is one query, not four per group.
+        assertThat(statements).isEqualTo(1);
     }
 
     @Test

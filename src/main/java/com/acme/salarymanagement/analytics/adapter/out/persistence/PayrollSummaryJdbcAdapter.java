@@ -5,7 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -39,33 +38,17 @@ import com.acme.salarymanagement.shared.Money;
 @Repository
 class PayrollSummaryJdbcAdapter implements PayrollSummaryRepository {
 
-    private static final String SUMMARY =
-            """
-            WITH rates AS (
-                SELECT from_currency, rate
-                FROM   exchange_rate
-                WHERE  to_currency = :reportingCurrency
-                  AND  as_of = (SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency)
-            ),
-            normalised AS (
-                SELECT e.salary_amount * COALESCE(fx.rate, 1) AS reporting_amount
-                FROM   employee e
-                LEFT JOIN rates fx ON fx.from_currency = e.salary_currency
-                WHERE  e.status = 'ACTIVE'
-                  AND  (CAST(:country    AS text) IS NULL OR e.country_code    = :country)
-                  AND  (CAST(:department AS text) IS NULL OR e.department      = :department)
-                  AND  (CAST(:jobTitle   AS text) IS NULL OR e.job_title       = :jobTitle)
-                  AND  (CAST(:level      AS text) IS NULL OR e.seniority_level = :level)
-            )
+    private static final String SUMMARY = NormalisedSalaries.CTE.formatted("")
+            + """
             SELECT count(*)                                                      AS headcount,
                    COALESCE(sum(reporting_amount), 0)                            AS total_spend,
                    COALESCE(avg(reporting_amount), 0)                            AS average_salary,
                    COALESCE(percentile_disc(0.5) WITHIN GROUP (ORDER BY reporting_amount), 0)
                                                                                  AS median_salary,
-                   (SELECT max(as_of) FROM exchange_rate WHERE to_currency = :reportingCurrency)
-                                                                                 AS rates_as_of
+                   %s
             FROM   normalised
-            """;
+            """
+                    .formatted(NormalisedSalaries.SNAPSHOT_AND_COVERAGE);
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -75,28 +58,15 @@ class PayrollSummaryJdbcAdapter implements PayrollSummaryRepository {
 
     @Override
     public PayrollSummary summarise(DashboardFilters filters) {
-        MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("reportingCurrency", filters.reportingCurrency().code())
-                .addValue(
-                        "country",
-                        filters.country() == null ? null : filters.country().code())
-                .addValue(
-                        "department",
-                        filters.department() == null
-                                ? null
-                                : filters.department().value())
-                .addValue(
-                        "jobTitle",
-                        filters.jobTitle() == null ? null : filters.jobTitle().value())
-                .addValue(
-                        "level",
-                        filters.level() == null ? null : filters.level().name());
-
-        return jdbc.queryForObject(SUMMARY, parameters, (ResultSet row, int number) -> asSummary(row, filters));
+        return jdbc.queryForObject(
+                SUMMARY,
+                NormalisedSalaries.parameters(filters),
+                (ResultSet row, int number) -> asSummary(row, filters));
     }
 
     private static PayrollSummary asSummary(ResultSet row, DashboardFilters filters) throws SQLException {
         LocalDate ratesAsOf = row.getObject("rates_as_of", LocalDate.class);
+        NormalisedSalaries.refuseIfIncomplete(NormalisedSalaries.unconvertibleIn(row), filters, ratesAsOf);
         return new PayrollSummary(
                 row.getLong("headcount"),
                 money(row.getBigDecimal("total_spend"), filters),

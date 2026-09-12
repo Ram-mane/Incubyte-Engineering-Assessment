@@ -36,6 +36,7 @@ export class DashboardFacade {
   private readonly spreadBy = signal<DistributionDimension>('jobTitle');
   private readonly loading = signal(false);
   private readonly failed = signal(false);
+  private readonly refusal = signal<string | null>(null);
   private readonly query = signal<DashboardQuery>({});
   /** Which request the screen is currently showing. Answers to older ones are dropped. */
   private inFlight = 0;
@@ -55,6 +56,15 @@ export class DashboardFacade {
   readonly distributionDimension = this.spreadBy.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly hasFailed = this.failed.asReadonly();
+
+  /**
+   * What to tell the person. A refused question and an unreachable server are different problems -
+   * "the rate table has no rates to EUR" sends someone to fix the data, "could not be loaded"
+   * sends them to refresh a page that will never load.
+   */
+  readonly failure = computed(
+    () => this.refusal() ?? 'The dashboard could not be loaded. The server may be starting up.',
+  );
   readonly filters = this.query.asReadonly();
   readonly filterOptions = this.options.asReadonly();
 
@@ -85,6 +95,7 @@ export class DashboardFacade {
     this.query.set(query);
     this.loading.set(true);
     this.failed.set(false);
+    this.refusal.set(null);
     this.loadBreakdown(query);
     this.loadDistribution(query);
     this.api.summary(query).subscribe({
@@ -95,13 +106,15 @@ export class DashboardFacade {
         this.current.set(summary);
         this.loading.set(false);
       },
-      error: () => {
+      error: (failure: { error?: { detail?: string } }) => {
         if (request !== this.inFlight) {
           return;
         }
         // Leaving the previous figures on screen under a new filter would be a dashboard
         // describing a question nobody asked.
         this.current.set(null);
+        // The server's own words when it gave any: a refusal explains itself, an outage cannot.
+        this.refusal.set(failure?.error?.detail ?? null);
         this.failed.set(true);
         this.loading.set(false);
       },

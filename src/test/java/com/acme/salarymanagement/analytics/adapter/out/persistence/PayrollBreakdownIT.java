@@ -63,12 +63,9 @@ class PayrollBreakdownIT extends PostgresIntegrationTest {
         long forTwoGroups =
                 CountingDataSource.statementsIssuedBy(() -> breakdowns.by(BreakdownDimension.LEVEL, ours()));
 
-        // Two statements, and the point is that it is two for both: one grouped query however many
-        // groups come back, plus one constant read of the rate date. An N+1 is a count that grows
-        // with the rows - this does not, which is the property worth pinning. The rate date is a
-        // second statement rather than a scalar subquery so that a filter matching nobody still
-        // reports which day it converted through (D143).
-        assertThat(forThreeGroups).isEqualTo(2);
+        // One query however many groups come back. An N+1 is a count that grows with the rows;
+        // this does not, which is the property worth pinning rather than the absolute number.
+        assertThat(forThreeGroups).isEqualTo(1);
         assertThat(forTwoGroups).isEqualTo(forThreeGroups);
     }
 
@@ -133,6 +130,18 @@ class PayrollBreakdownIT extends PostgresIntegrationTest {
             assertThat(row.headcount()).isEqualTo(1);
             assertThat(row.totalSpend().amount()).isEqualByComparingTo("108500.00");
         });
+    }
+
+    @Test
+    void the_empty_case_pays_one_extra_statement_to_name_its_rates() {
+        var nobody = new DashboardFilters(new CountryCode("JP"), null, new JobTitle(OURS), null, USD);
+
+        long statements =
+                CountingDataSource.statementsIssuedBy(() -> breakdowns.by(BreakdownDimension.DEPARTMENT, nobody));
+
+        // No groups means no row to carry the snapshot date, so it is read on its own - the one
+        // case where a second statement buys something (D144).
+        assertThat(statements).isEqualTo(2);
     }
 
     @Test
