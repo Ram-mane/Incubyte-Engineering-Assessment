@@ -344,8 +344,11 @@ the "Changed by" column renders for both roles — is confirmed on the deployed 
   evidence, not a gate: **no test asserts a plan yet** — that is PLAN 3.7, and until it lands
   nothing in the build would catch a regression to a sequential scan.
 - **Keyset pagination throughout.** Constant-time at any depth, stable under concurrent writes.
-- **`Clock` injected everywhere.** No `now()` in domain or application code, so audit timestamps and
-  FX rate selection are fully testable and the suite is deterministic.
+- **Time enters as a value, not as a clock.** `changeSalaryTo` takes the `Instant` to record, so a
+  domain method is a pure function of its arguments — no `Clock` reaches an aggregate. The
+  application layer injects one and resolves `instant()` at the boundary, which is the one place a
+  clock belongs. Audit timestamps and FX rate selection are fully testable and the suite is
+  deterministic.
 
 ## What I left out, and why
 
