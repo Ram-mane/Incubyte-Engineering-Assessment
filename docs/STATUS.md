@@ -99,7 +99,7 @@ on salary changes and `ETag`/`If-Match` on employee updates. Neither exists; a c
 
 ## Decisions recorded
 
-**D138–D161** this session (161 rows total), plus **ADR-0015**. No rows remain on `Probation`.
+**D138–D163** (163 rows total), plus **ADR-0015**. D163 supersedes D015. No rows remain on `Probation`.
 
 Load-bearing for the video:
 

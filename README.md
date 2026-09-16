@@ -55,8 +55,8 @@ name search · current annual base salary in each employee's local currency · s
 mandatory reason and an append-only audit log · salary bands per role × level × country, displayed
 on the employee record and never enforced.
 
-*Not built:* CSV bulk import. It is in the requirements as in-scope and it is the largest thing
-missing — see [Known issues](#known-issues-and-what-i-would-do-next).
+*Not built:* CSV bulk import — not a customer requirement, but a scope item I inferred from their
+data being in Excel; see [Known issues](#known-issues-and-what-i-would-do-next).
 
 **Answer questions** — a dashboard with KPI cards (total global payroll spend, active headcount,
 average and median salary, all normalised to USD through a seeded FX table), interactive filters by
@@ -101,8 +101,10 @@ SPRING_DATASOURCE_USERNAME
 SPRING_DATASOURCE_PASSWORD
 ```
 
-Flyway migrates on startup, so a fresh database provisions itself on first boot. Render polls
-`/actuator/health` to decide an instance is live; only `health` is exposed, because every other
+Flyway migrates on startup, so a fresh database provisions itself on first boot — schema only. The
+`seed` profile is what puts data in it, and it is deliberately **not** set on the deployed service,
+because it truncates and rebuilds on every cold start; the demo data was loaded by one deliberate
+run of it. Render polls `/actuator/health` to decide an instance is live; only `health` is exposed, because every other
 actuator endpoint is information disclosure nobody asked for.
 
 ## Stack
