@@ -123,9 +123,9 @@ raising quality rather than adding features.
 | 3.16 | Empty / loading / error states everywhere | `feat: add empty and error states` |
 | 3.17 | OpenAPI + Swagger UI link | `docs: publish openapi specification` |
 | 3.18 | Finalise `08-AI-WORKFLOW.md` with real prompts and rejected output | `docs: record ai workflow and rejected output` |
-| 3.19 | README: live URL, credentials, doc index, video link | `docs: write project readme` |
+| 3.19 | ~~README: live URL, credentials, doc index, video link~~ — **done.** All four present; the video link landed 16 Sep | `docs: write project readme` |
 | 3.20 | Final deploy + smoke test | `ci: deploy final build` |
-| 3.21 | **Record the demo video (3–5 min)** | — |
+| 3.21 | ~~**Record the demo video (3–5 min)**~~ — **done 16 Sep**, linked in the README | — |
 | 3.22 | Send the repo link | — |
 
 ---

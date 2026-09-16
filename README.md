@@ -21,7 +21,7 @@ published deliberately — see [Signing in](#signing-in).
 **API contract:** [`openapi.yaml`](openapi.yaml) — hand-written, and checked against the
 controllers. There is no Swagger UI; the spec is the contract and it is in the repository.
 
-**Video walkthrough (3–5 min):** _link added when recorded._
+**Video walkthrough (3–5 min):** https://drive.google.com/file/d/1c5UlFRHVQilX_U-pOAByc1Wnooxd9o41/view?usp=sharing
 
 ---
 

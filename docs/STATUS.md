@@ -8,9 +8,10 @@
 ## Position
 
 **Day 3, tasks 3.3, 3.4, 3.9 and the band work are complete. The build is feature-complete for
-submission and verified against the deployed instance.** PLAN's remaining Day 3 items are 3.10
-(bulk import), 3.11–3.12 (k6), 3.14 (Playwright) and 3.21 (the video). Of those, only **3.21 is
-planned** — the rest are cut and said to be cut in the README.
+submission and verified against the deployed instance.** The demo video is recorded and linked in
+the README (3.21, 3.19). PLAN's remaining Day 3 items are 3.11–3.12 (k6) and 3.14 (Playwright),
+both cut and said to be cut in the README; 3.10 (bulk import) is struck as never having been a
+customer requirement.
 
 Live: https://salary-management-ui-5bp6.onrender.com — `hr.manager@acme.example` / `demo-password`.
 Both services are Render free-tier and spin down; warm `/actuator/health` first (67 s measured,
@@ -52,7 +53,9 @@ _(none — working tree clean, `main` and `origin/main` in sync)_
 
 ## Blockers
 
-**1. The demo video is not recorded.** PLAN 3.21. The only thing between this and submission.
+**1. ~~The demo video is not recorded.~~ Closed 16 Sep** — recorded and linked in the README. An
+unauthenticated request to the Drive link returns 200 without redirecting to a sign-in page, which
+is evidence it is publicly reachable, not proof the video plays for a stranger.
 
 **2. `SPRING_DATASOURCE_URL` on Render has not been read back, and the string handed over in
 conversation was the `-pooler` host.** It cannot be read from this machine. The evidence that the
@@ -104,10 +107,11 @@ Load-bearing for the video:
 
 ## Next action
 
-`PLAN.md` task **3.21 — "Record the demo video (3–5 min)"**, to the script in PLAN's demo table.
-Warm `/actuator/health` first, and settle Blockers 2 and 3 in the Render dashboard before recording.
+`PLAN.md` task **3.22 — send the repository link.** 3.21 and 3.19 are done: the video is recorded
+and linked.
 
-Then 3.19 (README video link), 3.20 (final deploy smoke test), 3.22 (send the repository link).
+Before sending, settle Blockers 2, 3 and the seed-profile removal in the Render dashboard — none of
+the three can be read or changed from this machine — and run 3.20, the final deploy smoke test.
 
 ## Gotchas
 
