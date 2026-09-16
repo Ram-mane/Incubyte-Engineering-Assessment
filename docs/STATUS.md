@@ -17,7 +17,7 @@ Both services are Render free-tier and spin down; warm `/actuator/health` first 
 over 120 s after a long idle).
 
 **187 unit + 126 integration + 106 Angular specs green.** `mvn clean verify` 2:18, production
-`ng build` clean, mutation 89% (178/201 killed, strength 96%) against a 70% threshold.
+`ng build` clean, mutation 91% (213/234 killed, strength 98%) against a 70% threshold.
 
 ## Landed today
 

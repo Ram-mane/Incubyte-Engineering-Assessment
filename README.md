@@ -69,7 +69,7 @@ cd ui && npm install && npm start                              # http://localhos
 
 ```bash
 ./mvnw verify            # unit + integration + ArchUnit + Spotless + Checkstyle + PMD + JaCoCo
-./mvnw -Pmutation test   # mutation testing, 70% threshold, currently 89%
+./mvnw -Pmutation test   # mutation testing, 70% threshold, currently 91%
 cd ui && npm test        # 106 Angular specs
 cd ui && npm run build   # the production compiler: stricter templates than the test run (D161)
 ```
@@ -204,7 +204,7 @@ Coverage says a line ran. None of the following is about coverage.
   deliberate violation, the append-only grant against a real `UPDATE`, and the optimistic lock by
   reverting its `WHERE` clause and watching two threads both succeed — `expected: 1 but was: 2`,
   two revisions claiming the same starting salary. A gate that has never failed is decoration.
-- **Mutation testing at 89%**, 178 of 201 mutations killed, test strength 96%, against a 70%
+- **Mutation testing at 91%**, 213 of 234 mutations killed, test strength 98%, against a 70%
   threshold. [`docs/07-TEST-STRATEGY.md`](docs/07-TEST-STRATEGY.md) §5 also says what that number
   *cannot* see — null guards, `Money`'s arithmetic and its rounding policy are covered by example
   tests, not by the score, and the manual probes that stand in for it are written down.
@@ -332,8 +332,8 @@ the "Changed by" column renders for both roles — is confirmed on the deployed 
 - **PostgreSQL enforces the audit guarantee.** The application role holds `INSERT` and `SELECT` on
   `salary_revision` and nothing else, so the log is append-only independent of application code.
 - **Mutation testing, not coverage theatre.** Pitest over `shared`, `domain` and `application`
-  against a 70% threshold; the build currently kills **178 of 201 mutations (89%)**, test strength
-  96%. Tests are proven to detect defects, not merely to execute lines — and
+  against a 70% threshold; the build currently kills **213 of 234 mutations (91%)**, test strength
+  98%. Tests are proven to detect defects, not merely to execute lines — and
   [what the score cannot see](docs/07-TEST-STRATEGY.md) is written down beside it, because a
   mutation score is bounded by what the tool elects to mutate.
 - **The dashboard aggregates in SQL.** Four KPI cards in one round trip, `percentile_disc` for the
