@@ -3,49 +3,47 @@
 > Written at the end of each session by `/wrap`, read at the start of each by `/prime`.
 > Hand-written, so `git log` wins any disagreement.
 
-**Last updated:** 2026-09-12, end of Day 3. Submission day.
+**Last updated:** 2026-09-16. Post-submission-build session: one UI defect, one UI polish item,
+one deploy config change, and a long documentation-accuracy pass.
 
 ## Position
 
-**Day 3, tasks 3.3, 3.4, 3.9 and the band work are complete. The build is feature-complete for
-submission and verified against the deployed instance.** The demo video is recorded and linked in
-the README (3.21, 3.19). PLAN's remaining Day 3 items are 3.11–3.12 (k6) and 3.14 (Playwright),
-both cut and said to be cut in the README; 3.10 (bulk import) is struck as never having been a
-customer requirement.
+**Day 3. The build is feature-complete and the demo video is recorded and linked.** The only PLAN
+task left is **3.22 — send the repository link**, with 3.20 (final deploy smoke test) ahead of it.
 
 Live: https://salary-management-ui-5bp6.onrender.com — `hr.manager@acme.example` / `demo-password`.
-Both services are Render free-tier and spin down; warm `/actuator/health` first (67 s measured,
-over 120 s after a long idle).
+API: https://salary-management-api-bv03.onrender.com. Both Render free-tier and spin down; warm
+`/actuator/health` first. Verified live on 16 Sep: login works, `/dashboard/summary` returns
+headcount 10,000 and `USD 1,213,179,157.20`.
 
-**187 unit + 126 integration + 106 Angular specs green.** `mvn clean verify` 2:18, production
-`ng build` clean, mutation 91% (213/234 killed, strength 98%) against a 70% threshold.
+Video: https://drive.google.com/file/d/1c5UlFRHVQilX_U-pOAByc1Wnooxd9o41/view?usp=sharing
+
+**187 unit + 126 integration + 106 Angular specs green.** `mvn clean verify` BUILD SUCCESS in 1:49,
+production `ng build` clean, mutation **213/234 killed (91%), test strength 98%**, line coverage
+305/329, against a 70% threshold.
+
+PLAN 3.10 (CSV bulk import) is **struck**, not pending — see D163. Still not built and cut:
+3.5 (band column in the directory), 3.7 (`EXPLAIN`-asserting tests), 3.7b, 3.8 (Caffeine),
+3.11–3.12 (k6), 3.14 (Playwright), 3.15 (accessibility pass), 3.17 (Swagger UI). All are in the
+README's known issues; none is one of the customer's ten points.
 
 ## Landed today
 
-Twenty-three commits, `9970c59` through `1b6e887`:
+Nine commits, `fe0f62a` through `7de4811`:
 
-- `feat: add the compensation dashboard screen` — 3.9, four KPI cards and four filters
-- `docs: quote the measured mutation score rather than the threshold` — D138
-- `docs: correct the percentile rule where it was still stated the old way`
-- `docs: record that plan 2.15 is deliberately unmet, not pending` — D139
-- `fix: paint only the dashboard answer that matches the filters on screen` — D140, the race
-- `refactor: move the shared filter options out of the directory feature`
-- `docs: stop claiming tests assert the query plans` — no test runs `EXPLAIN`
-- `docs: record the review's pattern, and stop CLAUDE.md listing tools that do not exist` — D141, D142
-- `feat: break payroll spend down by department, country or level` — 3.3
-- `docs: record why the breakdown reads the rate date separately` — D143
-- `feat: show how pay is spread within each role` — 3.4
-- `fix: refuse to report a salary we have no rate for, instead of converting it at 1.0` — **ADR-0015**, D144–D146
-- `fix: answer for each dashboard section, and stop claiming a date that is absent`
-- `fix: refuse a pay change decided against a salary that has since moved` — D147, optimistic locking
-- `fix: correct the documents around the lock, and the tests that overstated it` — D148–D151
-- `feat: read the audit log through JPA, and measure the N+1 it starts with` — D152–D154
-- `feat: show each employee's salary band, and keep a refused pay change on screen` — D155–D159
-- `chore: re-seed the deployed database on the next boot` and its `Revert` — see D160
-- `docs: correct the record on the deployed re-seed, which did work` — D160
-- `docs: mark the credentials rotated, and note what rotation does not prove`
-- `fix: make the production build compile, which is why the site never deployed` — D161
-- `docs: make the README a submission document and STATUS match what shipped`
+- `fix: stop the band panel answering for the previous salary` — the panel kept the old verdict for
+  ~4s after a raise while the header showed the new figure
+- `feat: write wire constants the way a person reads them` — `EnumLabelPipe`; MERIT / HR_MANAGER
+  render as prose, wire values unchanged
+- `chore: stop returning visitors being served a stale index.html` — `Cache-Control: no-cache`
+  header in `render.yaml`
+- `docs: stop claiming a customer asked for bulk import, and record the second pass` — R1–R12
+- `docs: describe the time discipline that is built, not a weaker one` — "Clock injected
+  everywhere" replaced; the domain takes an `Instant`
+- `docs: quote the mutation score this build actually produces` — 178/201/96% was stale
+- `docs: link the demo video, and close the blocker that was waiting on it`
+- `docs: close what the redeploy settled, and say what it did not`
+- `docs: retract the bulk-import claim where a reviewer reads it first`
 
 ## Uncommitted
 
@@ -53,90 +51,99 @@ _(none — working tree clean, `main` and `origin/main` in sync)_
 
 ## Blockers
 
-**1. ~~The demo video is not recorded.~~ Closed 16 Sep** — recorded and linked in the README. An
-unauthenticated request to the Drive link returns 200 without redirecting to a sign-in page, which
-is evidence it is publicly reachable, not proof the video plays for a stranger.
-
-**2. `SPRING_DATASOURCE_URL` still has not been read back** — open, and not closed by the 16 Sep
-redeploy. The string handed over in conversation was the `-pooler` host and it cannot be read from
-this machine. The indirect evidence is now one boot stronger: removing `SPRING_PROFILES_ACTIVE`
-forced a fresh container, and `DatabaseIdentityCheck` — which runs after migration and refuses to
-start unless the migration pool is *not* `salary_app` and the application pool *is*, the exact
-pooler failure D110 documents — passed on that cold boot too. That is still inference. It is also
+**1. `SPRING_DATASOURCE_URL` has never been read back, and the string handed over in conversation
+was the `-pooler` host.** Cannot be read from this machine. The evidence the service is on the
+direct host is indirect: `DatabaseIdentityCheck` runs after migration on every boot and refuses to
+start unless the migration pool is *not* `salary_app` and the application pool *is* — the exact
+pooler failure D110 documents — and it passed again on the 16 Sep cold boot. That is inference, and
 weaker than it looks: PgBouncer leaks `SET ROLE` only when a server connection is actually reused
-across clients, so a quiet boot can pass and a busy demo can fail. **Read the string in the Render
-dashboard.** If it contains `-pooler`, drop that from the host and redeploy.
+between clients, so a quiet boot passes and a busy demo is where it bites. **Read the string in the
+Render dashboard.** If it contains `-pooler`, drop that from the host and redeploy.
 
-**3. ~~The rotated Neon password may not be on the Render service.~~ Closed 16 Sep.** Removing
-`SPRING_PROFILES_ACTIVE` forced a redeploy, so the container now serving built its Hikari pool from
-nothing after the rotation — every connection it holds authenticated against Neon with the rotated
-credential. That is the conclusive check this blocker itself prescribed, and the ambiguity it
-described is gone: the old evidence was consistent with a service that would die on its next cold
-start, and the cold start has now happened.
+**2. The seed-profile removal is not proved by data.** `SPRING_PROFILES_ACTIVE=seed` was deleted
+from the Render service on 16 Sep. Dashboard change, so like Blocker 1 it cannot be read back here
+— recorded on the operator's word. And no API response can confirm it: the seed is deterministic,
+so every figure is identical whether or not it re-seeded on boot. **The one check that works:**
+change a salary, force a cold start (wait out the spin-down or redeploy), confirm the change
+survived. Until that runs, what is known is that the variable was removed, not that a reviewer's
+edit will still be there tomorrow. This is the last unverified thing in the submission and it is
+the one a reviewer would find the hard way.
 
-**3b. The seed profile is removed, and the removal is not yet proved by data.**
-`SPRING_PROFILES_ACTIVE=seed` was deleted from the Render service on 16 Sep. It was a dashboard
-change, so like Blocker 2 it cannot be read back from here — recorded on the operator's word, not
-verified. The seed is deterministic, so every figure the API returns is identical whether or not it
-re-seeded on boot, and no total can distinguish the two. **The one check that can:** change a
-salary, force a cold start, and confirm the change survived. Until that runs, what is known is that
-the variable was removed, not that a reviewer's edit will still be there tomorrow.
+**3. Mutation runs are slow enough to look hung.** `./mvnw -Pmutation test` sends **183 test
+classes** to the minion, Testcontainers ITs included. Two runs were killed — one by session
+teardown, one by a 9.5-minute timeout — both sitting at `Created 43 mutation test units` with no
+output. The third, left unbounded, finished fine. **Do not conclude it has hung.** A killed run also
+leaves a truncated `target/pit-reports/mutations.xml` that parses to plausible, wrong numbers
+(199 mutations / 91% / 97%); check the file ends with `</mutations>` before believing it.
 
 **4. CI runs neither the Angular suite nor `ng build`.** `.github/workflows/ci.yml` runs `mvnw
-verify` and pitest only. The UI silently stayed on an old bundle for hours today because `ng build`
-was failing while all 101 specs passed (D161). Nothing in CI would have caught it.
+verify` and pitest only. D161's failure — `ng build` broken while all specs passed — would still
+get through today.
 
 **5. `PLAN.md` 2.15 is deliberately unmet** (D139). `compensation` and `bulkimport` packages do not
 exist; no empty ones were created to make `failOnEmptyShould` pass.
 
 **6. Domain rejections still return 400 where `04-API-DESIGN.md` says 422/409** (D112), except the
-two fixed today: a concurrent change is 409 with its own `type` URI, and an unconvertible currency
-is 422.
+two fixed: concurrent change is 409 with its own `type` URI, unconvertible currency is 422.
 
 **7. The documented concurrency contract is unbuilt.** `04-API-DESIGN.md` promises `Idempotency-Key`
 on salary changes and `ETag`/`If-Match` on employee updates. Neither exists; a client sending
 `If-Match` today is ignored. The lost update itself is closed (D147).
 
+**8. The `render.yaml` no-cache header is unverified.** Added 13 Sep; it applies on blueprint sync
+and nobody has checked the response headers on the deployed static site.
+
+**Closed this session:** the demo video (recorded, linked, and the Drive URL answers 200 to an
+unauthenticated request); the rotated Neon password (the 16 Sep redeploy built a fresh Hikari pool
+that authenticated entirely post-rotation — the conclusive check the old blocker itself prescribed).
+
 ## Decisions recorded
 
-**D138–D163** (163 rows total), plus **ADR-0015**. D163 supersedes D015. No rows remain on `Probation`.
+**D162** — "most of them confirmed with the customer" counted against the replies: eight of eleven.
+**D163** — bulk CSV import was never a customer requirement; **supersedes D015**, which said it was
+kept in scope and was still `Active`.
 
-Load-bearing for the video:
+163 rows total. No rows on `Probation`.
 
+Load-bearing for the interview:
+
+- **D163** — a requirement I inferred hardened into scope, a PLAN task, and a README line calling it
+  "the largest thing missing". The customer was about to be told the biggest hole in their build was
+  something they never asked for.
+- **D162** — an accurate adjective nobody had ever checked is one repo change from being a wrong one.
 - **ADR-0015** — an unconvertible salary refuses the whole answer rather than converting at 1.0.
-  Found by review, reproduced against seeded data: `?currency=EUR` reported India at EUR 4.93bn,
-  and one newer rate row moved global payroll from 1.21bn to 6.19bn on the default path.
-- **D147** — optimistic locking is a compare-and-set on the salary itself, no version column,
-  proved by reverting the clause and watching two threads both succeed.
+- **D147** — optimistic locking is a compare-and-set on the salary itself, no version column.
 - **D153** — an N+1's cost scales with distinct associated rows, not rows read: 2 / 31 / 1.
-- **D155** — seeded bands sit around current pay; 61% of the org read "above maximum" before that.
 - **D160** — verify a deploy by asking the new build for something only it can answer.
 - **D161** — `ng test` is not `ng build`.
 
 ## Next action
 
-`PLAN.md` task **3.22 — send the repository link.** 3.21 and 3.19 are done: the video is recorded
-and linked.
+`PLAN.md` task **3.22 — "Send the repo link"**.
 
-Before sending, settle Blockers 2, 3 and the seed-profile removal in the Render dashboard — none of
-the three can be read or changed from this machine — and run 3.20, the final deploy smoke test.
+Before sending: run **3.20** (final deploy smoke test), and settle Blockers 1 and 2 in the Render
+dashboard — neither can be read or changed from this machine.
 
 ## Gotchas
 
 - **Builds need `JAVA_HOME=$HOME/.jdks/jdk-21`.** Node 22 is at `~/.nodejs/current/bin`.
 - **One Maven process at a time.** Two concurrent runs corrupt `target/checkstyle-result.xml` and
-  produce failures that have nothing to do with the code. Cost two false alarms today.
+  produce failures that have nothing to do with the code.
+- **A killed Pitest run leaves a truncated report that still parses.** Check for the closing
+  `</mutations>` tag before quoting any number from `target/pit-reports/mutations.xml`.
+- **`mvn -q clean verify` hides the summary.** The tail is mid-run Spring logs, not the result —
+  redirect to a file and grep for `BUILD`, or read `target/{surefire,failsafe}-reports/*.txt`.
 - **`pkill -f <broad pattern>` kills your own tooling.** `pkill -f "spring-boot:run"` and
   `pkill -f "until curl"` each killed the shell that issued them. Match on something narrower.
 - **Run `ng build`, not only `ng test`, before pushing UI changes** (D161). Karma compiles JIT;
   the production build is AOT with strict templates and rejects things the suite accepts.
 - **Verify a deploy by asking the new build for something only it can answer** (D160). Render keeps
   the previous container serving until the replacement is healthy, so `/actuator/health` 200 can be
-  the old version answering — which is how a successful re-seed was misread as a failed one.
-- **Render applies `render.yaml` envVars on blueprint sync, and also on auto-deploy** — the seed
-  profile did take effect, and removing it from `render.yaml` did *not* remove it from the service:
-  it survived as a dashboard variable from 12 to 16 Sep, truncating and rebuilding on every cold
-  start for four days. A blueprint edit adds and updates; deleting needs the dashboard.
+  the old version answering.
+- **Render applies `render.yaml` envVars on blueprint sync and on auto-deploy** — but removing one
+  from `render.yaml` does *not* remove it from the service. `SPRING_PROFILES_ACTIVE=seed` survived
+  as a dashboard variable from 12 to 16 Sep, truncating and rebuilding on every cold start for four
+  days. A blueprint edit adds and updates; deleting needs the dashboard.
 - **Never point the datasource at Neon's `-pooler` host** (D110).
 - **Angular templates:** `as` binds only on the primary `@if`, never on `@else if`; `@` in template
   text must be `&#64;`; `type="number"` with `ngModel` routes the value through `parseFloat` and
@@ -151,10 +158,12 @@ the three can be read or changed from this machine — and run 3.20, the final d
   binds the test thread.
 - **PMD's `GuardLogStatement` fires on any log argument that is a method call.** Hoist it first.
 - **Spotless deletes an import the moment nothing uses it.** Add an import and its first use in the
-  same edit, and re-run `spotless:apply` before assuming a replacement failed — a reformat is why
-  several scripted edits silently did not match today.
+  same edit, and re-run `spotless:apply` before assuming a replacement failed.
 - **A bare `? IS NULL` is rejected by PostgreSQL.** Optional filters need `CAST(:p AS text) IS NULL`.
 - **An unquoted `key: value` inside a YAML description breaks the file.** `defined: false` in prose
   made `openapi.yaml` unparseable.
+- **A stale number fails nothing.** Four places repeated a mutation score measured four days and
+  several features earlier. Re-measure before quoting, and grep for the figure — not the sentence —
+  because the same number hides in a comment, a bullet and a command block.
 
-_`main` and `origin/main` at `1b6e887` when this was written._
+_`main` and `origin/main` at `7de4811` when this was written._
