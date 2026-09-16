@@ -95,6 +95,10 @@ Decisions, not omissions. Each was confirmed with Incubyte or is a deliberate na
 
 ## 6. Definition of done
 
+> Written on Day 0 and not maintained during the build, which is why every box is still unticked —
+> the empty boxes record when this list was written, not what shipped. The README's **Known issues**
+> section is the current account of what is built, what is not, and why.
+
 - [ ] Every KPI card, filter and chart in §3.2 working against 10,000 seeded employees
 - [ ] Seed runs in one command and is deterministic
 - [ ] Suite green, fast (< 90 s), deterministic; mutation score ≥ 70% on domain packages

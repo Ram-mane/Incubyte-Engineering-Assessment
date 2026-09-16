@@ -57,22 +57,30 @@ _(none — working tree clean, `main` and `origin/main` in sync)_
 unauthenticated request to the Drive link returns 200 without redirecting to a sign-in page, which
 is evidence it is publicly reachable, not proof the video plays for a stranger.
 
-**2. `SPRING_DATASOURCE_URL` on Render has not been read back, and the string handed over in
-conversation was the `-pooler` host.** It cannot be read from this machine. The evidence that the
-service is on the direct host is strong but indirect: `DatabaseIdentityCheck` runs after migration
-on every boot and refuses to start unless the migration pool is *not* `salary_app` and the
-application pool *is* — the exact pooler failure D110 documents — and the service came up cleanly
-through four deploys today. That is inference, not the string. **Read it in the Render dashboard
-before recording.** If it contains `-pooler`, drop that from the host and redeploy: PgBouncer in
-transaction mode leaks `SET ROLE` between clients, which silently unbinds the append-only grant the
-whole project rests on.
+**2. `SPRING_DATASOURCE_URL` still has not been read back** — open, and not closed by the 16 Sep
+redeploy. The string handed over in conversation was the `-pooler` host and it cannot be read from
+this machine. The indirect evidence is now one boot stronger: removing `SPRING_PROFILES_ACTIVE`
+forced a fresh container, and `DatabaseIdentityCheck` — which runs after migration and refuses to
+start unless the migration pool is *not* `salary_app` and the application pool *is*, the exact
+pooler failure D110 documents — passed on that cold boot too. That is still inference. It is also
+weaker than it looks: PgBouncer leaks `SET ROLE` only when a server connection is actually reused
+across clients, so a quiet boot can pass and a busy demo can fail. **Read the string in the Render
+dashboard.** If it contains `-pooler`, drop that from the host and redeploy.
 
-**3. The rotated Neon password may not be on the Render service.** Both the Render API key and the
-Neon password were rotated today. The API kept serving afterwards and 16 concurrent queries all
-succeeded — but Hikari's pool is 10 connections and every one of those may predate the rotation.
-That evidence fits a correctly updated service *and* one that dies on its next cold start, which on
-a free tier that spins down is the middle of a demo. Conclusive check: Render → the API service →
-Manual Deploy → Restart service, then load the dashboard. ~4 minutes.
+**3. ~~The rotated Neon password may not be on the Render service.~~ Closed 16 Sep.** Removing
+`SPRING_PROFILES_ACTIVE` forced a redeploy, so the container now serving built its Hikari pool from
+nothing after the rotation — every connection it holds authenticated against Neon with the rotated
+credential. That is the conclusive check this blocker itself prescribed, and the ambiguity it
+described is gone: the old evidence was consistent with a service that would die on its next cold
+start, and the cold start has now happened.
+
+**3b. The seed profile is removed, and the removal is not yet proved by data.**
+`SPRING_PROFILES_ACTIVE=seed` was deleted from the Render service on 16 Sep. It was a dashboard
+change, so like Blocker 2 it cannot be read back from here — recorded on the operator's word, not
+verified. The seed is deterministic, so every figure the API returns is identical whether or not it
+re-seeded on boot, and no total can distinguish the two. **The one check that can:** change a
+salary, force a cold start, and confirm the change survived. Until that runs, what is known is that
+the variable was removed, not that a reviewer's edit will still be there tomorrow.
 
 **4. CI runs neither the Angular suite nor `ng build`.** `.github/workflows/ci.yml` runs `mvnw
 verify` and pitest only. The UI silently stayed on an old bundle for hours today because `ng build`
@@ -126,7 +134,9 @@ the three can be read or changed from this machine — and run 3.20, the final d
   the previous container serving until the replacement is healthy, so `/actuator/health` 200 can be
   the old version answering — which is how a successful re-seed was misread as a failed one.
 - **Render applies `render.yaml` envVars on blueprint sync, and also on auto-deploy** — the seed
-  profile did take effect. Do not leave it on: it truncates and rebuilds on every cold start.
+  profile did take effect, and removing it from `render.yaml` did *not* remove it from the service:
+  it survived as a dashboard variable from 12 to 16 Sep, truncating and rebuilding on every cold
+  start for four days. A blueprint edit adds and updates; deleting needs the dashboard.
 - **Never point the datasource at Neon's `-pooler` host** (D110).
 - **Angular templates:** `as` binds only on the primary `@if`, never on `@else if`; `@` in template
   text must be `&#64;`; `type="number"` with `ngModel` routes the value through `parseFloat` and

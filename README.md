@@ -23,6 +23,11 @@ controllers. There is no Swagger UI; the spec is the contract and it is in the r
 
 **Video walkthrough (3–5 min):** https://drive.google.com/file/d/1c5UlFRHVQilX_U-pOAByc1Wnooxd9o41/view?usp=sharing
 
+It was recorded before the final mutation run and quotes the figures standing at the time —
+178 of 201 killed, test strength 96%. The numbers in this README are the current ones: 213 of 234
+(91%), strength 98%. The score went up because Java landed after the earlier run, not because
+anything was re-measured to look better.
+
 ---
 
 ## The problem, and how the scope was settled
